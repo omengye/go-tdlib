@@ -1,3 +1,3 @@
-module github.com/zelenin/go-tdlib
+module github.com/omengye/go-tdlib
 
-go 1.23
+go 1.25

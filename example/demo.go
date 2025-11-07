@@ -9,7 +9,11 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/zelenin/go-tdlib/client"
+	"github.com/omengye/go-tdlib/client"
+)
+
+var (
+	ChatsInfo = make(map[int64]string)
 )
 
 func main() {
@@ -50,7 +54,31 @@ func main() {
 		log.Fatalf("SetLogVerbosityLevel error: %s", err)
 	}
 
-	tdlibClient, err := client.NewClient(authorizer)
+	proxy := client.WithProxy(&client.AddProxyRequest{
+		Server: "127.0.0.1",
+		Port:   11034,
+		Enable: true,
+		Type:   &client.ProxyTypeSocks5{},
+	})
+
+	// ----------------------- handle chat message -----------------------
+	resHandCallback := func(result client.Type) {
+		switch result.GetConstructor() {
+		case client.ConstructorUpdateChatLastMessage:
+			res := result.(*client.UpdateChatLastMessage)
+			if res.LastMessage == nil || ChatsInfo[res.ChatId] == "" {
+				return
+			}
+			chatName := ChatsInfo[res.ChatId]
+			switch res.LastMessage.Content.MessageContentConstructor() {
+			case client.ConstructorMessageText:
+				content := res.LastMessage.Content.(*client.MessageText)
+				log.Printf("Channel: %s, Content: %s", chatName, content.Text.Text)
+			}
+		}
+	}
+
+	tdlibClient, err := client.NewClient(authorizer, client.WithResultHandler(client.NewCallbackResultHandler(resHandCallback)), proxy)
 	if err != nil {
 		log.Fatalf("NewClient error: %s", err)
 	}
@@ -75,12 +103,72 @@ func main() {
 		log.Printf("TDLib version supported by the library (%s) is not the same as TDLib version (%s)", client.TDLIB_VERSION, commitOption.(*client.OptionValueString).Value)
 	}
 
+	// ----------------------- login user info -----------------------
+
 	me, err := tdlibClient.GetMe(context.Background())
 	if err != nil {
 		log.Fatalf("GetMe error: %s", err)
 	}
 
-	log.Printf("Me: %s %s", me.FirstName, me.LastName)
+	log.Printf("Me: %s %s, Id: %d", me.FirstName, me.LastName, me.Id)
+
+	userInfo, err := tdlibClient.GetUserFullInfo(context.Background(), &client.GetUserFullInfoRequest{
+		UserId: me.Id,
+	})
+	if err != nil {
+		log.Fatalf("GetUserFullInfo error: %s", err)
+	}
+
+	// ----------------------- all chats -----------------------
+	chats, err := tdlibClient.GetChats(context.Background(), &client.GetChatsRequest{
+		Limit: 100,
+	})
+	if err != nil {
+		log.Fatalf("GetChats error: %s", err)
+	}
+	for _, id := range chats.ChatIds {
+		if c, err := tdlibClient.GetChat(context.Background(), &client.GetChatRequest{
+			ChatId: id,
+		}); err == nil {
+			log.Printf("chat title: %s, id: %d", c.Title, c.Id)
+
+			// find all channels
+			switch c.Type.ChatTypeConstructor() {
+			case client.ConstructorChatTypeSupergroup:
+				ct := c.Type.(*client.ChatTypeSupergroup)
+				if ct.IsChannel {
+					ChatsInfo[c.Id] = c.Title
+				}
+			}
+		}
+	}
+
+	// ----------------------- personal channel -----------------------
+
+	chatId := userInfo.PersonalChatId
+	chat, err := tdlibClient.GetChat(context.Background(), &client.GetChatRequest{
+		ChatId: chatId,
+	})
+	if err != nil {
+		log.Fatalf("PersonalChat error: %s", err)
+	}
+	log.Printf("chat title: %s", chat.Title)
+
+	// ----------------------- bots -----------------------
+
+	bots, err := tdlibClient.GetOwnedBots(context.Background())
+	if err != nil {
+		log.Fatalf("GetOwnedBots error: %s", err)
+	}
+	for _, botId := range bots.UserIds {
+		bot, err := tdlibClient.GetUser(context.Background(), &client.GetUserRequest{
+			UserId: botId,
+		})
+		if err != nil {
+			log.Fatalf("GetUser Bot error: %s", err)
+		}
+		log.Printf("bot username: %s, id: %d", bot.Usernames.EditableUsername, bot.Id)
+	}
 
 	ch := make(chan os.Signal, 2)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)

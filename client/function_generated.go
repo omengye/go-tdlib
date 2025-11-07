@@ -1392,7 +1392,7 @@ func (req GetRepliedMessageRequest) GetFunctionName() string {
 	return "getRepliedMessage"
 }
 
-// Returns information about a non-bundled message that is replied by a given message. Also, returns the pinned message, the game message, the invoice message, the message with a previously set same background, the giveaway message, and the topic creation message for messages of the types messagePinMessage, messageGameScore, messagePaymentSuccessful, messageChatSetBackground, messageGiveawayCompleted and topic messages without non-bundled replied message respectively. Returns a 404 error if the message doesn't exist
+// Returns information about a non-bundled message that is replied by a given message. Also, returns the pinned message for messagePinMessage, the game message for messageGameScore, the invoice message for messagePaymentSuccessful, the message with a previously set same background for messageChatSetBackground, the giveaway message for messageGiveawayCompleted, the checklist message for messageChecklistTasksDone, messageChecklistTasksAdded, the message with suggested post information for messageSuggestedPostApprovalFailed, messageSuggestedPostApproved, messageSuggestedPostDeclined, messageSuggestedPostPaid, messageSuggestedPostRefunded, the message with the regular gift that was upgraded for messageUpgradedGift with origin of the type upgradedGiftOriginUpgrade, and the topic creation message for topic messages without non-bundled replied message. Returns a 404 error if the message doesn't exist
 func (client *Client) GetRepliedMessage(ctx context.Context, req *GetRepliedMessageRequest) (*Message, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -1604,6 +1604,32 @@ func (client *Client) GetMessageViewers(ctx context.Context, req *GetMessageView
 	}
 
 	return UnmarshalMessageViewers(result.Data)
+}
+
+type GetMessageAuthorRequest struct {
+	request
+	// Chat identifier
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the message
+	MessageId int64 `json:"message_id"`
+}
+
+func (req GetMessageAuthorRequest) GetFunctionName() string {
+	return "getMessageAuthor"
+}
+
+// Returns information about actual author of a message sent on behalf of a channel. The method can be called if messageProperties.can_get_author == true
+func (client *Client) GetMessageAuthor(ctx context.Context, req *GetMessageAuthorRequest) (*User, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalUser(result.Data)
 }
 
 type GetFileRequest struct {
@@ -2282,7 +2308,7 @@ func (req GetInactiveSupergroupChatsRequest) GetFunctionName() string {
 	return "getInactiveSupergroupChats"
 }
 
-// Returns a list of recently inactive supergroups and channels. Can be used when user reaches limit on the number of joined supergroups and channels and receives CHANNELS_TOO_MUCH error. Also, the limit can be increased with Telegram Premium
+// Returns a list of recently inactive supergroups and channels. Can be used when user reaches limit on the number of joined supergroups and channels and receives the error "CHANNELS_TOO_MUCH". Also, the limit can be increased with Telegram Premium
 func (client *Client) GetInactiveSupergroupChats(ctx context.Context) (*Chats, error) {
 	req := &GetInactiveSupergroupChatsRequest{}
 	result, err := client.Send(ctx, req)
@@ -2320,6 +2346,310 @@ func (client *Client) GetSuitablePersonalChats(ctx context.Context) (*Chats, err
 	return UnmarshalChats(result.Data)
 }
 
+type LoadDirectMessagesChatTopicsRequest struct {
+	request
+	// Chat identifier of the channel direct messages chat
+	ChatId int64 `json:"chat_id"`
+	// The maximum number of topics to be loaded. For optimal performance, the number of loaded topics is chosen by TDLib and can be smaller than the specified limit, even if the end of the list is not reached
+	Limit int32 `json:"limit"`
+}
+
+func (req LoadDirectMessagesChatTopicsRequest) GetFunctionName() string {
+	return "loadDirectMessagesChatTopics"
+}
+
+// Loads more topics in a channel direct messages chat administered by the current user. The loaded topics will be sent through updateDirectMessagesChatTopic. Topics are sorted by their topic.order in descending order. Returns a 404 error if all topics have been loaded
+func (client *Client) LoadDirectMessagesChatTopics(ctx context.Context, req *LoadDirectMessagesChatTopicsRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type GetDirectMessagesChatTopicRequest struct {
+	request
+	// Chat identifier of the channel direct messages chat
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the topic to get
+	TopicId int64 `json:"topic_id"`
+}
+
+func (req GetDirectMessagesChatTopicRequest) GetFunctionName() string {
+	return "getDirectMessagesChatTopic"
+}
+
+// Returns information about the topic in a channel direct messages chat administered by the current user
+func (client *Client) GetDirectMessagesChatTopic(ctx context.Context, req *GetDirectMessagesChatTopicRequest) (*DirectMessagesChatTopic, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalDirectMessagesChatTopic(result.Data)
+}
+
+type GetDirectMessagesChatTopicHistoryRequest struct {
+	request
+	// Chat identifier of the channel direct messages chat
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the topic which messages will be fetched
+	TopicId int64 `json:"topic_id"`
+	// Identifier of the message starting from which messages must be fetched; use 0 to get results from the last message
+	FromMessageId int64 `json:"from_message_id"`
+	// Specify 0 to get results from exactly the message from_message_id or a negative number from -99 to -1 to get additionally -offset newer messages
+	Offset int32 `json:"offset"`
+	// The maximum number of messages to be returned; must be positive and can't be greater than 100. If the offset is negative, then the limit must be greater than or equal to -offset. For optimal performance, the number of returned messages is chosen by TDLib and can be smaller than the specified limit
+	Limit int32 `json:"limit"`
+}
+
+func (req GetDirectMessagesChatTopicHistoryRequest) GetFunctionName() string {
+	return "getDirectMessagesChatTopicHistory"
+}
+
+// Returns messages in the topic in a channel direct messages chat administered by the current user. The messages are returned in reverse chronological order (i.e., in order of decreasing message_id)
+func (client *Client) GetDirectMessagesChatTopicHistory(ctx context.Context, req *GetDirectMessagesChatTopicHistoryRequest) (*Messages, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalMessages(result.Data)
+}
+
+type GetDirectMessagesChatTopicMessageByDateRequest struct {
+	request
+	// Chat identifier of the channel direct messages chat
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the topic which messages will be fetched
+	TopicId int64 `json:"topic_id"`
+	// Point in time (Unix timestamp) relative to which to search for messages
+	Date int32 `json:"date"`
+}
+
+func (req GetDirectMessagesChatTopicMessageByDateRequest) GetFunctionName() string {
+	return "getDirectMessagesChatTopicMessageByDate"
+}
+
+// Returns the last message sent in the topic in a channel direct messages chat administered by the current user no later than the specified date
+func (client *Client) GetDirectMessagesChatTopicMessageByDate(ctx context.Context, req *GetDirectMessagesChatTopicMessageByDateRequest) (*Message, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalMessage(result.Data)
+}
+
+type DeleteDirectMessagesChatTopicHistoryRequest struct {
+	request
+	// Chat identifier of the channel direct messages chat
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the topic which messages will be deleted
+	TopicId int64 `json:"topic_id"`
+}
+
+func (req DeleteDirectMessagesChatTopicHistoryRequest) GetFunctionName() string {
+	return "deleteDirectMessagesChatTopicHistory"
+}
+
+// Deletes all messages in the topic in a channel direct messages chat administered by the current user
+func (client *Client) DeleteDirectMessagesChatTopicHistory(ctx context.Context, req *DeleteDirectMessagesChatTopicHistoryRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type DeleteDirectMessagesChatTopicMessagesByDateRequest struct {
+	request
+	// Chat identifier of the channel direct messages chat
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the topic which messages will be deleted
+	TopicId int64 `json:"topic_id"`
+	// The minimum date of the messages to delete
+	MinDate int32 `json:"min_date"`
+	// The maximum date of the messages to delete
+	MaxDate int32 `json:"max_date"`
+}
+
+func (req DeleteDirectMessagesChatTopicMessagesByDateRequest) GetFunctionName() string {
+	return "deleteDirectMessagesChatTopicMessagesByDate"
+}
+
+// Deletes all messages between the specified dates in the topic in a channel direct messages chat administered by the current user. Messages sent in the last 30 seconds will not be deleted
+func (client *Client) DeleteDirectMessagesChatTopicMessagesByDate(ctx context.Context, req *DeleteDirectMessagesChatTopicMessagesByDateRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type SetDirectMessagesChatTopicIsMarkedAsUnreadRequest struct {
+	request
+	// Chat identifier of the channel direct messages chat
+	ChatId int64 `json:"chat_id"`
+	// Topic identifier
+	TopicId int64 `json:"topic_id"`
+	// New value of is_marked_as_unread
+	IsMarkedAsUnread bool `json:"is_marked_as_unread"`
+}
+
+func (req SetDirectMessagesChatTopicIsMarkedAsUnreadRequest) GetFunctionName() string {
+	return "setDirectMessagesChatTopicIsMarkedAsUnread"
+}
+
+// Changes the marked as unread state of the topic in a channel direct messages chat administered by the current user
+func (client *Client) SetDirectMessagesChatTopicIsMarkedAsUnread(ctx context.Context, req *SetDirectMessagesChatTopicIsMarkedAsUnreadRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type UnpinAllDirectMessagesChatTopicMessagesRequest struct {
+	request
+	// Identifier of the chat
+	ChatId int64 `json:"chat_id"`
+	// Topic identifier
+	TopicId int64 `json:"topic_id"`
+}
+
+func (req UnpinAllDirectMessagesChatTopicMessagesRequest) GetFunctionName() string {
+	return "unpinAllDirectMessagesChatTopicMessages"
+}
+
+// Removes all pinned messages from the topic in a channel direct messages chat administered by the current user
+func (client *Client) UnpinAllDirectMessagesChatTopicMessages(ctx context.Context, req *UnpinAllDirectMessagesChatTopicMessagesRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type ReadAllDirectMessagesChatTopicReactionsRequest struct {
+	request
+	// Identifier of the chat
+	ChatId int64 `json:"chat_id"`
+	// Topic identifier
+	TopicId int64 `json:"topic_id"`
+}
+
+func (req ReadAllDirectMessagesChatTopicReactionsRequest) GetFunctionName() string {
+	return "readAllDirectMessagesChatTopicReactions"
+}
+
+// Removes all unread reactions in the topic in a channel direct messages chat administered by the current user
+func (client *Client) ReadAllDirectMessagesChatTopicReactions(ctx context.Context, req *ReadAllDirectMessagesChatTopicReactionsRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type GetDirectMessagesChatTopicRevenueRequest struct {
+	request
+	// Chat identifier of the channel direct messages chat administered by the current user
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the topic
+	TopicId int64 `json:"topic_id"`
+}
+
+func (req GetDirectMessagesChatTopicRevenueRequest) GetFunctionName() string {
+	return "getDirectMessagesChatTopicRevenue"
+}
+
+// Returns the total number of Telegram Stars received by the channel chat for direct messages from the given topic
+func (client *Client) GetDirectMessagesChatTopicRevenue(ctx context.Context, req *GetDirectMessagesChatTopicRevenueRequest) (*StarCount, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalStarCount(result.Data)
+}
+
+type ToggleDirectMessagesChatTopicCanSendUnpaidMessagesRequest struct {
+	request
+	// Chat identifier
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the topic
+	TopicId int64 `json:"topic_id"`
+	// Pass true to allow unpaid messages; pass false to disallow unpaid messages
+	CanSendUnpaidMessages bool `json:"can_send_unpaid_messages"`
+	// Pass true to refund the user previously paid messages
+	RefundPayments bool `json:"refund_payments"`
+}
+
+func (req ToggleDirectMessagesChatTopicCanSendUnpaidMessagesRequest) GetFunctionName() string {
+	return "toggleDirectMessagesChatTopicCanSendUnpaidMessages"
+}
+
+// Allows to send unpaid messages to the given topic of the channel direct messages chat administered by the current user
+func (client *Client) ToggleDirectMessagesChatTopicCanSendUnpaidMessages(ctx context.Context, req *ToggleDirectMessagesChatTopicCanSendUnpaidMessagesRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
 type LoadSavedMessagesTopicsRequest struct {
 	request
 	// The maximum number of topics to be loaded. For optimal performance, the number of loaded topics is chosen by TDLib and can be smaller than the specified limit, even if the end of the list is not reached
@@ -2350,9 +2680,9 @@ type GetSavedMessagesTopicHistoryRequest struct {
 	SavedMessagesTopicId int64 `json:"saved_messages_topic_id"`
 	// Identifier of the message starting from which messages must be fetched; use 0 to get results from the last message
 	FromMessageId int64 `json:"from_message_id"`
-	// Specify 0 to get results from exactly the message from_message_id or a negative offset up to 99 to get additionally some newer messages
+	// Specify 0 to get results from exactly the message from_message_id or a negative number from -99 to -1 to get additionally -offset newer messages
 	Offset int32 `json:"offset"`
-	// The maximum number of messages to be returned; must be positive and can't be greater than 100. If the offset is negative, the limit must be greater than or equal to -offset. For optimal performance, the number of returned messages is chosen by TDLib and can be smaller than the specified limit
+	// The maximum number of messages to be returned; must be positive and can't be greater than 100. If the offset is negative, then the limit must be greater than or equal to -offset. For optimal performance, the number of returned messages is chosen by TDLib and can be smaller than the specified limit
 	Limit int32 `json:"limit"`
 }
 
@@ -2536,9 +2866,9 @@ type GetChatHistoryRequest struct {
 	ChatId int64 `json:"chat_id"`
 	// Identifier of the message starting from which history must be fetched; use 0 to get results from the last message
 	FromMessageId int64 `json:"from_message_id"`
-	// Specify 0 to get results from exactly the message from_message_id or a negative offset up to 99 to get additionally some newer messages
+	// Specify 0 to get results from exactly the message from_message_id or a negative number from -99 to -1 to get additionally -offset newer messages
 	Offset int32 `json:"offset"`
-	// The maximum number of messages to be returned; must be positive and can't be greater than 100. If the offset is negative, the limit must be greater than or equal to -offset. For optimal performance, the number of returned messages is chosen by TDLib and can be smaller than the specified limit
+	// The maximum number of messages to be returned; must be positive and can't be greater than 100. If the offset is negative, then the limit must be greater than or equal to -offset. For optimal performance, the number of returned messages is chosen by TDLib and can be smaller than the specified limit
 	Limit int32 `json:"limit"`
 	// Pass true to get only messages that are available without sending network requests
 	OnlyLocal bool `json:"only_local"`
@@ -2570,9 +2900,9 @@ type GetMessageThreadHistoryRequest struct {
 	MessageId int64 `json:"message_id"`
 	// Identifier of the message starting from which history must be fetched; use 0 to get results from the last message
 	FromMessageId int64 `json:"from_message_id"`
-	// Specify 0 to get results from exactly the message from_message_id or a negative offset up to 99 to get additionally some newer messages
+	// Specify 0 to get results from exactly the message from_message_id or a negative number from -99 to -1 to get additionally -offset newer messages
 	Offset int32 `json:"offset"`
-	// The maximum number of messages to be returned; must be positive and can't be greater than 100. If the offset is negative, the limit must be greater than or equal to -offset. For optimal performance, the number of returned messages is chosen by TDLib and can be smaller than the specified limit
+	// The maximum number of messages to be returned; must be positive and can't be greater than 100. If the offset is negative, then the limit must be greater than or equal to -offset. For optimal performance, the number of returned messages is chosen by TDLib and can be smaller than the specified limit
 	Limit int32 `json:"limit"`
 }
 
@@ -2650,29 +2980,27 @@ type SearchChatMessagesRequest struct {
 	request
 	// Identifier of the chat in which to search messages
 	ChatId int64 `json:"chat_id"`
+	// Pass topic identifier to search messages only in specific topic; pass null to search for messages in all topics
+	TopicId MessageTopic `json:"topic_id"`
 	// Query to search for
 	Query string `json:"query"`
 	// Identifier of the sender of messages to search for; pass null to search for messages from any sender. Not supported in secret chats
 	SenderId MessageSender `json:"sender_id"`
 	// Identifier of the message starting from which history must be fetched; use 0 to get results from the last message
 	FromMessageId int64 `json:"from_message_id"`
-	// Specify 0 to get results from exactly the message from_message_id or a negative offset to get the specified message and some newer messages
+	// Specify 0 to get results from exactly the message from_message_id or a negative number to get the specified message and some newer messages
 	Offset int32 `json:"offset"`
-	// The maximum number of messages to be returned; must be positive and can't be greater than 100. If the offset is negative, the limit must be greater than -offset. For optimal performance, the number of returned messages is chosen by TDLib and can be smaller than the specified limit
+	// The maximum number of messages to be returned; must be positive and can't be greater than 100. If the offset is negative, then the limit must be greater than -offset. For optimal performance, the number of returned messages is chosen by TDLib and can be smaller than the specified limit
 	Limit int32 `json:"limit"`
 	// Additional filter for messages to search; pass null to search for all messages
 	Filter SearchMessagesFilter `json:"filter"`
-	// If not 0, only messages in the specified thread will be returned; supergroups only
-	MessageThreadId int64 `json:"message_thread_id"`
-	// If not 0, only messages in the specified Saved Messages topic will be returned; pass 0 to return all messages, or for chats other than Saved Messages
-	SavedMessagesTopicId int64 `json:"saved_messages_topic_id"`
 }
 
 func (req SearchChatMessagesRequest) GetFunctionName() string {
 	return "searchChatMessages"
 }
 
-// Searches for messages with given words in the chat. Returns the results in reverse chronological order, i.e. in order of decreasing message_id. Cannot be used in secret chats with a non-empty query (searchSecretMessages must be used instead), or without an enabled message database. For optimal performance, the number of returned messages is chosen by TDLib and can be smaller than the specified limit. A combination of query, sender_id, filter and message_thread_id search criteria is expected to be supported, only if it is required for Telegram official application implementation
+// Searches for messages with given words in the chat. Returns the results in reverse chronological order, i.e. in order of decreasing message_id. Cannot be used in secret chats with a non-empty query (searchSecretMessages must be used instead), or without an enabled message database. For optimal performance, the number of returned messages is chosen by TDLib and can be smaller than the specified limit. A combination of query, sender_id, filter and topic_id search criteria is expected to be supported, only if it is required for Telegram official application implementation
 func (client *Client) SearchChatMessages(ctx context.Context, req *SearchChatMessagesRequest) (*FoundChatMessages, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -2766,9 +3094,9 @@ type SearchSavedMessagesRequest struct {
 	Query string `json:"query"`
 	// Identifier of the message starting from which messages must be fetched; use 0 to get results from the last message
 	FromMessageId int64 `json:"from_message_id"`
-	// Specify 0 to get results from exactly the message from_message_id or a negative offset to get the specified message and some newer messages
+	// Specify 0 to get results from exactly the message from_message_id or a negative number to get the specified message and some newer messages
 	Offset int32 `json:"offset"`
-	// The maximum number of messages to be returned; must be positive and can't be greater than 100. If the offset is negative, the limit must be greater than -offset. For optimal performance, the number of returned messages is chosen by TDLib and can be smaller than the specified limit
+	// The maximum number of messages to be returned; must be positive and can't be greater than 100. If the offset is negative, then the limit must be greater than -offset. For optimal performance, the number of returned messages is chosen by TDLib and can be smaller than the specified limit
 	Limit int32 `json:"limit"`
 }
 
@@ -2804,7 +3132,7 @@ func (req SearchCallMessagesRequest) GetFunctionName() string {
 	return "searchCallMessages"
 }
 
-// Searches for call messages. Returns the results in reverse chronological order (i.e., in order of decreasing message_id). For optimal performance, the number of returned messages is chosen by TDLib
+// Searches for call and group call messages. Returns the results in reverse chronological order (i.e., in order of decreasing message_id). For optimal performance, the number of returned messages is chosen by TDLib
 func (client *Client) SearchCallMessages(ctx context.Context, req *SearchCallMessagesRequest) (*FoundMessages, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -2844,6 +3172,60 @@ func (client *Client) SearchOutgoingDocumentMessages(ctx context.Context, req *S
 	return UnmarshalFoundMessages(result.Data)
 }
 
+type GetPublicPostSearchLimitsRequest struct {
+	request
+	// Query that will be searched for
+	Query string `json:"query"`
+}
+
+func (req GetPublicPostSearchLimitsRequest) GetFunctionName() string {
+	return "getPublicPostSearchLimits"
+}
+
+// Checks public post search limits without actually performing the search
+func (client *Client) GetPublicPostSearchLimits(ctx context.Context, req *GetPublicPostSearchLimitsRequest) (*PublicPostSearchLimits, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalPublicPostSearchLimits(result.Data)
+}
+
+type SearchPublicPostsRequest struct {
+	request
+	// Query to search for
+	Query string `json:"query"`
+	// Offset of the first entry to return as received from the previous request; use empty string to get the first chunk of results
+	Offset string `json:"offset"`
+	// The maximum number of messages to be returned; up to 100. For optimal performance, the number of returned messages is chosen by TDLib and can be smaller than the specified limit
+	Limit int32 `json:"limit"`
+	// The amount of Telegram Stars the user agreed to pay for the search; pass 0 for free searches
+	StarCount int64 `json:"star_count"`
+}
+
+func (req SearchPublicPostsRequest) GetFunctionName() string {
+	return "searchPublicPosts"
+}
+
+// Searches for public channel posts using the given query. For optimal performance, the number of returned messages is chosen by TDLib and can be smaller than the specified limit
+func (client *Client) SearchPublicPosts(ctx context.Context, req *SearchPublicPostsRequest) (*FoundPublicPosts, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalFoundPublicPosts(result.Data)
+}
+
 type SearchPublicMessagesByTagRequest struct {
 	request
 	// Hashtag or cashtag to search for
@@ -2875,7 +3257,7 @@ func (client *Client) SearchPublicMessagesByTag(ctx context.Context, req *Search
 type SearchPublicStoriesByTagRequest struct {
 	request
 	// Identifier of the chat that posted the stories to search for; pass 0 to search stories in all chats
-	StorySenderChatId int64 `json:"story_sender_chat_id"`
+	StoryPosterChatId int64 `json:"story_poster_chat_id"`
 	// Hashtag or cashtag to search for
 	Tag string `json:"tag"`
 	// Offset of the first entry to return as received from the previous request; use empty string to get the first chunk of results
@@ -3146,12 +3528,12 @@ type GetChatMessageCalendarRequest struct {
 	request
 	// Identifier of the chat in which to return information about messages
 	ChatId int64 `json:"chat_id"`
+	// Pass topic identifier to get the result only in specific topic; pass null to get the result in all topics; forum topics and message threads aren't supported
+	TopicId MessageTopic `json:"topic_id"`
 	// Filter for message content. Filters searchMessagesFilterEmpty, searchMessagesFilterMention, searchMessagesFilterUnreadMention, and searchMessagesFilterUnreadReaction are unsupported in this function
 	Filter SearchMessagesFilter `json:"filter"`
 	// The message identifier from which to return information about messages; use 0 to get results from the last message
 	FromMessageId int64 `json:"from_message_id"`
-	// If not0, only messages in the specified Saved Messages topic will be considered; pass 0 to consider all messages, or for chats other than Saved Messages
-	SavedMessagesTopicId int64 `json:"saved_messages_topic_id"`
 }
 
 func (req GetChatMessageCalendarRequest) GetFunctionName() string {
@@ -3176,10 +3558,10 @@ type GetChatMessageCountRequest struct {
 	request
 	// Identifier of the chat in which to count messages
 	ChatId int64 `json:"chat_id"`
+	// Pass topic identifier to get number of messages only in specific topic; pass null to get number of messages in all topics; message threads aren't supported
+	TopicId MessageTopic `json:"topic_id"`
 	// Filter for message content; searchMessagesFilterEmpty is unsupported in this function
 	Filter SearchMessagesFilter `json:"filter"`
-	// If not 0, only messages in the specified Saved Messages topic will be counted; pass 0 to count all messages, or for chats other than Saved Messages
-	SavedMessagesTopicId int64 `json:"saved_messages_topic_id"`
 	// Pass true to get the number of messages without sending network requests, or -1 if the number of messages is unknown locally
 	ReturnLocal bool `json:"return_local"`
 }
@@ -3188,7 +3570,7 @@ func (req GetChatMessageCountRequest) GetFunctionName() string {
 	return "getChatMessageCount"
 }
 
-// Returns approximate number of messages of the specified type in the chat
+// Returns approximate number of messages of the specified type in the chat or its topic
 func (client *Client) GetChatMessageCount(ctx context.Context, req *GetChatMessageCountRequest) (*Count, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -3206,21 +3588,19 @@ type GetChatMessagePositionRequest struct {
 	request
 	// Identifier of the chat in which to find message position
 	ChatId int64 `json:"chat_id"`
-	// Message identifier
-	MessageId int64 `json:"message_id"`
+	// Pass topic identifier to get position among messages only in specific topic; pass null to get position among all chat messages; message threads aren't supported
+	TopicId MessageTopic `json:"topic_id"`
 	// Filter for message content; searchMessagesFilterEmpty, searchMessagesFilterUnreadMention, searchMessagesFilterUnreadReaction, and searchMessagesFilterFailedToSend are unsupported in this function
 	Filter SearchMessagesFilter `json:"filter"`
-	// If not 0, only messages in the specified thread will be considered; supergroups only
-	MessageThreadId int64 `json:"message_thread_id"`
-	// If not 0, only messages in the specified Saved Messages topic will be considered; pass 0 to consider all relevant messages, or for chats other than Saved Messages
-	SavedMessagesTopicId int64 `json:"saved_messages_topic_id"`
+	// Message identifier
+	MessageId int64 `json:"message_id"`
 }
 
 func (req GetChatMessagePositionRequest) GetFunctionName() string {
 	return "getChatMessagePosition"
 }
 
-// Returns approximate 1-based position of a message among messages, which can be found by the specified filter in the chat. Cannot be used in secret chats
+// Returns approximate 1-based position of a message among messages, which can be found by the specified filter in the chat and topic. Cannot be used in secret chats
 func (client *Client) GetChatMessagePosition(ctx context.Context, req *GetChatMessagePositionRequest) (*Count, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -3444,6 +3824,124 @@ func (req ReportSponsoredChatRequest) GetFunctionName() string {
 
 // Reports a sponsored chat to Telegram moderators
 func (client *Client) ReportSponsoredChat(ctx context.Context, req *ReportSponsoredChatRequest) (ReportSponsoredResult, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	switch result.MetaType {
+	case ConstructorReportSponsoredResultOk:
+		return UnmarshalReportSponsoredResultOk(result.Data)
+
+	case ConstructorReportSponsoredResultFailed:
+		return UnmarshalReportSponsoredResultFailed(result.Data)
+
+	case ConstructorReportSponsoredResultOptionRequired:
+		return UnmarshalReportSponsoredResultOptionRequired(result.Data)
+
+	case ConstructorReportSponsoredResultAdsHidden:
+		return UnmarshalReportSponsoredResultAdsHidden(result.Data)
+
+	case ConstructorReportSponsoredResultPremiumRequired:
+		return UnmarshalReportSponsoredResultPremiumRequired(result.Data)
+
+	default:
+		return nil, errors.New("invalid type")
+	}
+}
+
+type GetVideoMessageAdvertisementsRequest struct {
+	request
+	// Identifier of the chat with the message
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the message
+	MessageId int64 `json:"message_id"`
+}
+
+func (req GetVideoMessageAdvertisementsRequest) GetFunctionName() string {
+	return "getVideoMessageAdvertisements"
+}
+
+// Returns advertisements to be shown while a video from a message is watched. Available only if messageProperties.can_get_video_advertisements
+func (client *Client) GetVideoMessageAdvertisements(ctx context.Context, req *GetVideoMessageAdvertisementsRequest) (*VideoMessageAdvertisements, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalVideoMessageAdvertisements(result.Data)
+}
+
+type ViewVideoMessageAdvertisementRequest struct {
+	request
+	// Unique identifier of the advertisement
+	AdvertisementUniqueId int64 `json:"advertisement_unique_id"`
+}
+
+func (req ViewVideoMessageAdvertisementRequest) GetFunctionName() string {
+	return "viewVideoMessageAdvertisement"
+}
+
+// Informs TDLib that the user viewed a video message advertisement
+func (client *Client) ViewVideoMessageAdvertisement(ctx context.Context, req *ViewVideoMessageAdvertisementRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type ClickVideoMessageAdvertisementRequest struct {
+	request
+	// Unique identifier of the advertisement
+	AdvertisementUniqueId int64 `json:"advertisement_unique_id"`
+}
+
+func (req ClickVideoMessageAdvertisementRequest) GetFunctionName() string {
+	return "clickVideoMessageAdvertisement"
+}
+
+// Informs TDLib that the user clicked a video message advertisement
+func (client *Client) ClickVideoMessageAdvertisement(ctx context.Context, req *ClickVideoMessageAdvertisementRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type ReportVideoMessageAdvertisementRequest struct {
+	request
+	// Unique identifier of the advertisement
+	AdvertisementUniqueId int64 `json:"advertisement_unique_id"`
+	// Option identifier chosen by the user; leave empty for the initial request
+	OptionId []byte `json:"option_id"`
+}
+
+func (req ReportVideoMessageAdvertisementRequest) GetFunctionName() string {
+	return "reportVideoMessageAdvertisement"
+}
+
+// Reports a video message advertisement to Telegram moderators
+func (client *Client) ReportVideoMessageAdvertisement(ctx context.Context, req *ReportVideoMessageAdvertisementRequest) (ReportSponsoredResult, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -3772,8 +4270,8 @@ type SendMessageRequest struct {
 	request
 	// Target chat
 	ChatId int64 `json:"chat_id"`
-	// If not 0, the message thread identifier in which the message will be sent
-	MessageThreadId int64 `json:"message_thread_id"`
+	// Topic in which the message will be sent; pass null if none
+	TopicId MessageTopic `json:"topic_id"`
 	// Information about the message or story to be replied; pass null if none
 	ReplyTo InputMessageReplyTo `json:"reply_to"`
 	// Options to be used to send the message; pass null to use default options
@@ -3806,8 +4304,8 @@ type SendMessageAlbumRequest struct {
 	request
 	// Target chat
 	ChatId int64 `json:"chat_id"`
-	// If not 0, the message thread identifier in which the messages will be sent
-	MessageThreadId int64 `json:"message_thread_id"`
+	// Topic in which the messages will be sent; pass null if none
+	TopicId MessageTopic `json:"topic_id"`
 	// Information about the message or story to be replied; pass null if none
 	ReplyTo InputMessageReplyTo `json:"reply_to"`
 	// Options to be used to send the messages; pass null to use default options
@@ -3866,8 +4364,8 @@ type SendInlineQueryResultMessageRequest struct {
 	request
 	// Target chat
 	ChatId int64 `json:"chat_id"`
-	// If not 0, the message thread identifier in which the message will be sent
-	MessageThreadId int64 `json:"message_thread_id"`
+	// Topic in which the message will be sent; pass null if none
+	TopicId MessageTopic `json:"topic_id"`
 	// Information about the message or story to be replied; pass null if none
 	ReplyTo InputMessageReplyTo `json:"reply_to"`
 	// Options to be used to send the message; pass null to use default options
@@ -3902,15 +4400,15 @@ type ForwardMessagesRequest struct {
 	request
 	// Identifier of the chat to which to forward messages
 	ChatId int64 `json:"chat_id"`
-	// If not 0, the message thread identifier in which the message will be sent; for forum threads only
-	MessageThreadId int64 `json:"message_thread_id"`
+	// Topic in which the messages will be forwarded; message threads aren't supported; pass null if none
+	TopicId MessageTopic `json:"topic_id"`
 	// Identifier of the chat from which to forward messages
 	FromChatId int64 `json:"from_chat_id"`
 	// Identifiers of the messages to forward. Message identifiers must be in a strictly increasing order. At most 100 messages can be forwarded simultaneously. A message can be forwarded only if messageProperties.can_be_forwarded
 	MessageIds []int64 `json:"message_ids"`
 	// Options to be used to send the messages; pass null to use default options
 	Options *MessageSendOptions `json:"options"`
-	// Pass true to copy content of the messages without reference to the original sender. Always true if the messages are forwarded to a secret chat or are local. Use messageProperties.can_be_saved and messageProperties.can_be_copied_to_secret_chat to check whether the message is suitable
+	// Pass true to copy content of the messages without reference to the original sender. Always true if the messages are forwarded to a secret chat or are local. Use messageProperties.can_be_copied and messageProperties.can_be_copied_to_secret_chat to check whether the message is suitable
 	SendCopy bool `json:"send_copy"`
 	// Pass true to remove media captions of message copies. Ignored if send_copy is false
 	RemoveCaption bool `json:"remove_caption"`
@@ -3994,7 +4492,7 @@ func (client *Client) ResendMessages(ctx context.Context, req *ResendMessagesReq
 
 type AddLocalMessageRequest struct {
 	request
-	// Target chat
+	// Target chat; channel direct messages chats aren't supported
 	ChatId int64 `json:"chat_id"`
 	// Identifier of the sender of the message
 	SenderId MessageSender `json:"sender_id"`
@@ -4162,6 +4660,36 @@ func (req EditMessageLiveLocationRequest) GetFunctionName() string {
 
 // Edits the message content of a live location. Messages can be edited for a limited period of time specified in the live location. Returns the edited message after the edit is completed on the server side
 func (client *Client) EditMessageLiveLocation(ctx context.Context, req *EditMessageLiveLocationRequest) (*Message, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalMessage(result.Data)
+}
+
+type EditMessageChecklistRequest struct {
+	request
+	// The chat the message belongs to
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the message. Use messageProperties.can_be_edited to check whether the message can be edited
+	MessageId int64 `json:"message_id"`
+	// The new message reply markup; pass null if none; for bots only
+	ReplyMarkup ReplyMarkup `json:"reply_markup"`
+	// The new checklist. If some tasks were completed, this information will be kept
+	Checklist *InputChecklist `json:"checklist"`
+}
+
+func (req EditMessageChecklistRequest) GetFunctionName() string {
+	return "editMessageChecklist"
+}
+
+// Edits the message content of a checklist. Returns the edited message after the edit is completed on the server side
+func (client *Client) EditMessageChecklist(ctx context.Context, req *EditMessageChecklistRequest) (*Message, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -4610,6 +5138,38 @@ func (client *Client) EditBusinessMessageLiveLocation(ctx context.Context, req *
 	return UnmarshalBusinessMessage(result.Data)
 }
 
+type EditBusinessMessageChecklistRequest struct {
+	request
+	// Unique identifier of business connection on behalf of which the message was sent
+	BusinessConnectionId string `json:"business_connection_id"`
+	// The chat the message belongs to
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the message
+	MessageId int64 `json:"message_id"`
+	// The new message reply markup; pass null if none
+	ReplyMarkup ReplyMarkup `json:"reply_markup"`
+	// The new checklist. If some tasks were completed, this information will be kept
+	Checklist *InputChecklist `json:"checklist"`
+}
+
+func (req EditBusinessMessageChecklistRequest) GetFunctionName() string {
+	return "editBusinessMessageChecklist"
+}
+
+// Edits the content of a checklist in a message sent on behalf of a business account; for bots only
+func (client *Client) EditBusinessMessageChecklist(ctx context.Context, req *EditBusinessMessageChecklistRequest) (*BusinessMessage, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalBusinessMessage(result.Data)
+}
+
 type EditBusinessMessageMediaRequest struct {
 	request
 	// Unique identifier of business connection on behalf of which the message was sent
@@ -4823,7 +5383,7 @@ func (client *Client) DeleteBusinessMessages(ctx context.Context, req *DeleteBus
 type EditBusinessStoryRequest struct {
 	request
 	// Identifier of the chat that posted the story
-	StorySenderChatId int64 `json:"story_sender_chat_id"`
+	StoryPosterChatId int64 `json:"story_poster_chat_id"`
 	// Identifier of the story to edit
 	StoryId int32 `json:"story_id"`
 	// New content of the story
@@ -4840,7 +5400,7 @@ func (req EditBusinessStoryRequest) GetFunctionName() string {
 	return "editBusinessStory"
 }
 
-// Changes a story sent by the bot on behalf of a business account; for bots only
+// Changes a story posted by the bot on behalf of a business account; for bots only
 func (client *Client) EditBusinessStory(ctx context.Context, req *EditBusinessStoryRequest) (*Story, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -4866,7 +5426,7 @@ func (req DeleteBusinessStoryRequest) GetFunctionName() string {
 	return "deleteBusinessStory"
 }
 
-// Deletes a story sent by the bot on behalf of a business account; for bots only
+// Deletes a story posted by the bot on behalf of a business account; for bots only
 func (client *Client) DeleteBusinessStory(ctx context.Context, req *DeleteBusinessStoryRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -4940,7 +5500,7 @@ type SetBusinessAccountProfilePhotoRequest struct {
 	BusinessConnectionId string `json:"business_connection_id"`
 	// Profile photo to set; pass null to remove the photo
 	Photo InputChatPhoto `json:"photo"`
-	// Pass true to set the public photo, which will be visible even the main photo is hidden by privacy settings
+	// Pass true to set the public photo, which will be visible even if the main photo is hidden by privacy settings
 	IsPublic bool `json:"is_public"`
 }
 
@@ -5247,7 +5807,7 @@ type AddQuickReplyShortcutMessageRequest struct {
 	ShortcutName string `json:"shortcut_name"`
 	// Identifier of a quick reply message in the same shortcut to be replied; pass 0 if none
 	ReplyToMessageId int64 `json:"reply_to_message_id"`
-	// The content of the message to be added; inputMessagePoll, inputMessageForwarded and inputMessageLocation with live_period aren't supported
+	// The content of the message to be added; inputMessagePaidMedia, inputMessageForwarded and inputMessageLocation with live_period aren't supported
 	InputMessageContent InputMessageContent `json:"input_message_content"`
 }
 
@@ -5361,7 +5921,7 @@ type EditQuickReplyMessageRequest struct {
 	ShortcutId int32 `json:"shortcut_id"`
 	// Identifier of the message
 	MessageId int64 `json:"message_id"`
-	// New content of the message. Must be one of the following types: inputMessageText, inputMessageAnimation, inputMessageAudio, inputMessageDocument, inputMessagePhoto or inputMessageVideo
+	// New content of the message. Must be one of the following types: inputMessageAnimation, inputMessageAudio, inputMessageChecklist, inputMessageDocument, inputMessagePhoto, inputMessageText, or inputMessageVideo
 	InputMessageContent InputMessageContent `json:"input_message_content"`
 }
 
@@ -5369,7 +5929,7 @@ func (req EditQuickReplyMessageRequest) GetFunctionName() string {
 	return "editQuickReplyMessage"
 }
 
-// Asynchronously edits the text, media or caption of a quick reply message. Use quickReplyMessage.can_be_edited to check whether a message can be edited. Media message can be edited only to a media message. The type of message content in an album can't be changed with exception of replacing a photo with a video or vice versa
+// Asynchronously edits the text, media or caption of a quick reply message. Use quickReplyMessage.can_be_edited to check whether a message can be edited. Media message can be edited only to a media message. Checklist messages can be edited only to a checklist message. The type of message content in an album can't be changed with exception of replacing a photo with a video or vice versa
 func (client *Client) EditQuickReplyMessage(ctx context.Context, req *EditQuickReplyMessageRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -5412,6 +5972,8 @@ type CreateForumTopicRequest struct {
 	ChatId int64 `json:"chat_id"`
 	// Name of the topic; 1-128 characters
 	Name string `json:"name"`
+	// Pass true if the name of the topic wasn't entered explicitly; for chats with bots only
+	IsNameImplicit bool `json:"is_name_implicit"`
 	// Icon of the topic. Icon color must be one of 0x6FB9F0, 0xFFD67E, 0xCB86DB, 0x8EEE98, 0xFF93B2, or 0xFB6F5F. Telegram Premium users can use any custom emoji as topic icon, other users can use only a custom emoji returned by getForumTopicDefaultIcons
 	Icon *ForumTopicIcon `json:"icon"`
 }
@@ -5420,7 +5982,7 @@ func (req CreateForumTopicRequest) GetFunctionName() string {
 	return "createForumTopic"
 }
 
-// Creates a topic in a forum supergroup chat; requires can_manage_topics administrator or can_create_topics member right in the supergroup
+// Creates a topic in a forum supergroup chat or a chat with a bot with topics; requires can_manage_topics administrator or can_create_topics member right in the supergroup
 func (client *Client) CreateForumTopic(ctx context.Context, req *CreateForumTopicRequest) (*ForumTopicInfo, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -5438,8 +6000,8 @@ type EditForumTopicRequest struct {
 	request
 	// Identifier of the chat
 	ChatId int64 `json:"chat_id"`
-	// Message thread identifier of the forum topic
-	MessageThreadId int64 `json:"message_thread_id"`
+	// Forum topic identifier
+	ForumTopicId int32 `json:"forum_topic_id"`
 	// New name of the topic; 0-128 characters. If empty, the previous topic name is kept
 	Name string `json:"name"`
 	// Pass true to edit the icon of the topic. Icon of the General topic can't be edited
@@ -5452,7 +6014,7 @@ func (req EditForumTopicRequest) GetFunctionName() string {
 	return "editForumTopic"
 }
 
-// Edits title and icon of a topic in a forum supergroup chat; requires can_manage_topics right in the supergroup unless the user is creator of the topic
+// Edits title and icon of a topic in a forum supergroup chat or a chat with a bot with topics; for supergroup chats requires can_manage_topics administrator right unless the user is creator of the topic
 func (client *Client) EditForumTopic(ctx context.Context, req *EditForumTopicRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -5470,15 +6032,15 @@ type GetForumTopicRequest struct {
 	request
 	// Identifier of the chat
 	ChatId int64 `json:"chat_id"`
-	// Message thread identifier of the forum topic
-	MessageThreadId int64 `json:"message_thread_id"`
+	// Forum topic identifier
+	ForumTopicId int32 `json:"forum_topic_id"`
 }
 
 func (req GetForumTopicRequest) GetFunctionName() string {
 	return "getForumTopic"
 }
 
-// Returns information about a forum topic
+// Returns information about a topic in a forum supergroup chat or a chat with a bot with topics
 func (client *Client) GetForumTopic(ctx context.Context, req *GetForumTopicRequest) (*ForumTopic, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -5492,19 +6054,51 @@ func (client *Client) GetForumTopic(ctx context.Context, req *GetForumTopicReque
 	return UnmarshalForumTopic(result.Data)
 }
 
+type GetForumTopicHistoryRequest struct {
+	request
+	// Chat identifier
+	ChatId int64 `json:"chat_id"`
+	// Forum topic identifier
+	ForumTopicId int32 `json:"forum_topic_id"`
+	// Identifier of the message starting from which history must be fetched; use 0 to get results from the last message
+	FromMessageId int64 `json:"from_message_id"`
+	// Specify 0 to get results from exactly the message from_message_id or a negative number from -99 to -1 to get additionally -offset newer messages
+	Offset int32 `json:"offset"`
+	// The maximum number of messages to be returned; must be positive and can't be greater than 100. If the offset is negative, then the limit must be greater than or equal to -offset. For optimal performance, the number of returned messages is chosen by TDLib and can be smaller than the specified limit
+	Limit int32 `json:"limit"`
+}
+
+func (req GetForumTopicHistoryRequest) GetFunctionName() string {
+	return "getForumTopicHistory"
+}
+
+// Returns messages in a topic in a forum supergroup chat or a chat with a bot with topics. The messages are returned in reverse chronological order (i.e., in order of decreasing message_id). For optimal performance, the number of returned messages is chosen by TDLib
+func (client *Client) GetForumTopicHistory(ctx context.Context, req *GetForumTopicHistoryRequest) (*Messages, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalMessages(result.Data)
+}
+
 type GetForumTopicLinkRequest struct {
 	request
 	// Identifier of the chat
 	ChatId int64 `json:"chat_id"`
-	// Message thread identifier of the forum topic
-	MessageThreadId int64 `json:"message_thread_id"`
+	// Forum topic identifier
+	ForumTopicId int32 `json:"forum_topic_id"`
 }
 
 func (req GetForumTopicLinkRequest) GetFunctionName() string {
 	return "getForumTopicLink"
 }
 
-// Returns an HTTPS link to a topic in a forum chat. This is an offline method
+// Returns an HTTPS link to a topic in a forum supergroup chat. This is an offline method
 func (client *Client) GetForumTopicLink(ctx context.Context, req *GetForumTopicLinkRequest) (*MessageLink, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -5520,7 +6114,7 @@ func (client *Client) GetForumTopicLink(ctx context.Context, req *GetForumTopicL
 
 type GetForumTopicsRequest struct {
 	request
-	// Identifier of the forum chat
+	// Identifier of the chat
 	ChatId int64 `json:"chat_id"`
 	// Query to search for in the forum topic's name
 	Query string `json:"query"`
@@ -5528,8 +6122,8 @@ type GetForumTopicsRequest struct {
 	OffsetDate int32 `json:"offset_date"`
 	// The message identifier of the last message in the last found topic, or 0 for the first request
 	OffsetMessageId int64 `json:"offset_message_id"`
-	// The message thread identifier of the last found topic, or 0 for the first request
-	OffsetMessageThreadId int64 `json:"offset_message_thread_id"`
+	// The forum topic identifier of the last found topic, or 0 for the first request
+	OffsetForumTopicId int32 `json:"offset_forum_topic_id"`
 	// The maximum number of forum topics to be returned; up to 100. For optimal performance, the number of returned forum topics is chosen by TDLib and can be smaller than the specified limit
 	Limit int32 `json:"limit"`
 }
@@ -5538,7 +6132,7 @@ func (req GetForumTopicsRequest) GetFunctionName() string {
 	return "getForumTopics"
 }
 
-// Returns found forum topics in a forum chat. This is a temporary method for getting information about topic list from the server
+// Returns found forum topics in a forum supergroup chat or a chat with a bot with topics. This is a temporary method for getting information about topic list from the server
 func (client *Client) GetForumTopics(ctx context.Context, req *GetForumTopicsRequest) (*ForumTopics, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -5556,8 +6150,8 @@ type SetForumTopicNotificationSettingsRequest struct {
 	request
 	// Chat identifier
 	ChatId int64 `json:"chat_id"`
-	// Message thread identifier of the forum topic
-	MessageThreadId int64 `json:"message_thread_id"`
+	// Forum topic identifier
+	ForumTopicId int32 `json:"forum_topic_id"`
 	// New notification settings for the forum topic. If the topic is muted for more than 366 days, it is considered to be muted forever
 	NotificationSettings *ChatNotificationSettings `json:"notification_settings"`
 }
@@ -5566,7 +6160,7 @@ func (req SetForumTopicNotificationSettingsRequest) GetFunctionName() string {
 	return "setForumTopicNotificationSettings"
 }
 
-// Changes the notification settings of a forum topic
+// Changes the notification settings of a forum topic in a forum supergroup chat or a chat with a bot with topics
 func (client *Client) SetForumTopicNotificationSettings(ctx context.Context, req *SetForumTopicNotificationSettingsRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -5584,8 +6178,8 @@ type ToggleForumTopicIsClosedRequest struct {
 	request
 	// Identifier of the chat
 	ChatId int64 `json:"chat_id"`
-	// Message thread identifier of the forum topic
-	MessageThreadId int64 `json:"message_thread_id"`
+	// Forum topic identifier
+	ForumTopicId int32 `json:"forum_topic_id"`
 	// Pass true to close the topic; pass false to reopen it
 	IsClosed bool `json:"is_closed"`
 }
@@ -5594,7 +6188,7 @@ func (req ToggleForumTopicIsClosedRequest) GetFunctionName() string {
 	return "toggleForumTopicIsClosed"
 }
 
-// Toggles whether a topic is closed in a forum supergroup chat; requires can_manage_topics right in the supergroup unless the user is creator of the topic
+// Toggles whether a topic is closed in a forum supergroup chat; requires can_manage_topics administrator right in the supergroup unless the user is creator of the topic
 func (client *Client) ToggleForumTopicIsClosed(ctx context.Context, req *ToggleForumTopicIsClosedRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -5620,7 +6214,7 @@ func (req ToggleGeneralForumTopicIsHiddenRequest) GetFunctionName() string {
 	return "toggleGeneralForumTopicIsHidden"
 }
 
-// Toggles whether a General topic is hidden in a forum supergroup chat; requires can_manage_topics right in the supergroup
+// Toggles whether a General topic is hidden in a forum supergroup chat; requires can_manage_topics administrator right in the supergroup
 func (client *Client) ToggleGeneralForumTopicIsHidden(ctx context.Context, req *ToggleGeneralForumTopicIsHiddenRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -5638,8 +6232,8 @@ type ToggleForumTopicIsPinnedRequest struct {
 	request
 	// Chat identifier
 	ChatId int64 `json:"chat_id"`
-	// Message thread identifier of the forum topic
-	MessageThreadId int64 `json:"message_thread_id"`
+	// Forum topic identifier
+	ForumTopicId int32 `json:"forum_topic_id"`
 	// Pass true to pin the topic; pass false to unpin it
 	IsPinned bool `json:"is_pinned"`
 }
@@ -5648,7 +6242,7 @@ func (req ToggleForumTopicIsPinnedRequest) GetFunctionName() string {
 	return "toggleForumTopicIsPinned"
 }
 
-// Changes the pinned state of a forum topic; requires can_manage_topics right in the supergroup. There can be up to getOption("pinned_forum_topic_count_max") pinned forum topics
+// Changes the pinned state of a topic in a forum supergroup chat or a chat with a bot with topics; requires can_manage_topics administrator right in the supergroup. There can be up to getOption("pinned_forum_topic_count_max") pinned forum topics
 func (client *Client) ToggleForumTopicIsPinned(ctx context.Context, req *ToggleForumTopicIsPinnedRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -5666,15 +6260,15 @@ type SetPinnedForumTopicsRequest struct {
 	request
 	// Chat identifier
 	ChatId int64 `json:"chat_id"`
-	// The new list of pinned forum topics
-	MessageThreadIds []int64 `json:"message_thread_ids"`
+	// The new list of identifiers of the pinned forum topics
+	ForumTopicIds []int32 `json:"forum_topic_ids"`
 }
 
 func (req SetPinnedForumTopicsRequest) GetFunctionName() string {
 	return "setPinnedForumTopics"
 }
 
-// Changes the order of pinned forum topics; requires can_manage_topics right in the supergroup
+// Changes the order of pinned topics in a forum supergroup chat or a chat with a bot with topics; requires can_manage_topics administrator right in the supergroup
 func (client *Client) SetPinnedForumTopics(ctx context.Context, req *SetPinnedForumTopicsRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -5692,16 +6286,94 @@ type DeleteForumTopicRequest struct {
 	request
 	// Identifier of the chat
 	ChatId int64 `json:"chat_id"`
-	// Message thread identifier of the forum topic
-	MessageThreadId int64 `json:"message_thread_id"`
+	// Forum topic identifier
+	ForumTopicId int32 `json:"forum_topic_id"`
 }
 
 func (req DeleteForumTopicRequest) GetFunctionName() string {
 	return "deleteForumTopic"
 }
 
-// Deletes all messages in a forum topic; requires can_delete_messages administrator right in the supergroup unless the user is creator of the topic, the topic has no messages from other users and has at most 11 messages
+// Deletes all messages from a topic in a forum supergroup chat or a chat with a bot with topics; requires can_delete_messages administrator right in the supergroup unless the user is creator of the topic, the topic has no messages from other users and has at most 11 messages
 func (client *Client) DeleteForumTopic(ctx context.Context, req *DeleteForumTopicRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type ReadAllForumTopicMentionsRequest struct {
+	request
+	// Chat identifier
+	ChatId int64 `json:"chat_id"`
+	// Forum topic identifier in which mentions are marked as read
+	ForumTopicId int32 `json:"forum_topic_id"`
+}
+
+func (req ReadAllForumTopicMentionsRequest) GetFunctionName() string {
+	return "readAllForumTopicMentions"
+}
+
+// Marks all mentions in a topic in a forum supergroup chat as read
+func (client *Client) ReadAllForumTopicMentions(ctx context.Context, req *ReadAllForumTopicMentionsRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type ReadAllForumTopicReactionsRequest struct {
+	request
+	// Chat identifier
+	ChatId int64 `json:"chat_id"`
+	// Forum topic identifier in which reactions are marked as read
+	ForumTopicId int32 `json:"forum_topic_id"`
+}
+
+func (req ReadAllForumTopicReactionsRequest) GetFunctionName() string {
+	return "readAllForumTopicReactions"
+}
+
+// Marks all reactions in a topic in a forum supergroup chat or a chat with a bot with topics as read
+func (client *Client) ReadAllForumTopicReactions(ctx context.Context, req *ReadAllForumTopicReactionsRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type UnpinAllForumTopicMessagesRequest struct {
+	request
+	// Identifier of the chat
+	ChatId int64 `json:"chat_id"`
+	// Forum topic identifier in which messages will be unpinned
+	ForumTopicId int32 `json:"forum_topic_id"`
+}
+
+func (req UnpinAllForumTopicMessagesRequest) GetFunctionName() string {
+	return "unpinAllForumTopicMessages"
+}
+
+// Removes all pinned messages from a topic in a forum supergroup chat or a chat with a bot with topics; requires can_pin_messages member right in the supergroup
+func (client *Client) UnpinAllForumTopicMessages(ctx context.Context, req *UnpinAllForumTopicMessagesRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -6689,6 +7361,64 @@ func (client *Client) StopPoll(ctx context.Context, req *StopPollRequest) (*Ok, 
 	return UnmarshalOk(result.Data)
 }
 
+type AddChecklistTasksRequest struct {
+	request
+	// Identifier of the chat with the message
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the message containing the checklist. Use messageProperties.can_add_tasks to check whether the tasks can be added
+	MessageId int64 `json:"message_id"`
+	// List of added tasks
+	Tasks []*InputChecklistTask `json:"tasks"`
+}
+
+func (req AddChecklistTasksRequest) GetFunctionName() string {
+	return "addChecklistTasks"
+}
+
+// Adds tasks to a checklist in a message
+func (client *Client) AddChecklistTasks(ctx context.Context, req *AddChecklistTasksRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type MarkChecklistTasksAsDoneRequest struct {
+	request
+	// Identifier of the chat with the message
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the message containing the checklist. Use messageProperties.can_mark_tasks_as_done to check whether the tasks can be marked as done or not done
+	MessageId int64 `json:"message_id"`
+	// Identifiers of tasks that were marked as done
+	MarkedAsDoneTaskIds []int32 `json:"marked_as_done_task_ids"`
+	// Identifiers of tasks that were marked as not done
+	MarkedAsNotDoneTaskIds []int32 `json:"marked_as_not_done_task_ids"`
+}
+
+func (req MarkChecklistTasksAsDoneRequest) GetFunctionName() string {
+	return "markChecklistTasksAsDone"
+}
+
+// Adds tasks of a checklist in a message as done or not done
+func (client *Client) MarkChecklistTasksAsDone(ctx context.Context, req *MarkChecklistTasksAsDoneRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
 type HideSuggestedActionRequest struct {
 	request
 	// Suggested action to hide
@@ -7215,8 +7945,8 @@ type OpenWebAppRequest struct {
 	BotUserId int64 `json:"bot_user_id"`
 	// The URL from an inlineKeyboardButtonTypeWebApp button, a botMenuButton button, an internalLinkTypeAttachmentMenuBot link, or an empty string otherwise
 	Url string `json:"url"`
-	// If not 0, the message thread identifier in which the message will be sent
-	MessageThreadId int64 `json:"message_thread_id"`
+	// Topic in which the message will be sent; pass null if none
+	TopicId MessageTopic `json:"topic_id"`
 	// Information about the message or story to be replied in the message sent by the Web App; pass null if none
 	ReplyTo InputMessageReplyTo `json:"reply_to"`
 	// Parameters to use to open the Web App
@@ -7565,7 +8295,7 @@ func (req DeleteChatReplyMarkupRequest) GetFunctionName() string {
 	return "deleteChatReplyMarkup"
 }
 
-// Deletes the default reply markup from a chat. Must be called after a one-time keyboard or a replyMarkupForceReply reply markup has been used. An updateChatReplyMarkup update will be sent if the reply markup is changed
+// Deletes the default reply markup from a chat. Must be called after a one-time keyboard or a replyMarkupForceReply reply markup has been used or dismissed
 func (client *Client) DeleteChatReplyMarkup(ctx context.Context, req *DeleteChatReplyMarkupRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -7583,8 +8313,8 @@ type SendChatActionRequest struct {
 	request
 	// Chat identifier
 	ChatId int64 `json:"chat_id"`
-	// If not 0, the message thread identifier in which the action was performed
-	MessageThreadId int64 `json:"message_thread_id"`
+	// Identifier of the topic in which the action is performed
+	TopicId MessageTopic `json:"topic_id"`
 	// Unique identifier of business connection on behalf of which to send the request; for bots only
 	BusinessConnectionId string `json:"business_connection_id"`
 	// The action description; pass null to cancel the currently active action
@@ -7597,6 +8327,36 @@ func (req SendChatActionRequest) GetFunctionName() string {
 
 // Sends a notification about user activity in a chat
 func (client *Client) SendChatAction(ctx context.Context, req *SendChatActionRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type SendTextMessageDraftRequest struct {
+	request
+	// Chat identifier
+	ChatId int64 `json:"chat_id"`
+	// The forum topic identifier in which the message will be sent; pass 0 if none
+	ForumTopicId int32 `json:"forum_topic_id"`
+	// Unique identifier of the draft
+	DraftId JsonInt64 `json:"draft_id"`
+	// Draft text of the message
+	Text *FormattedText `json:"text"`
+}
+
+func (req SendTextMessageDraftRequest) GetFunctionName() string {
+	return "sendTextMessageDraft"
+}
+
+// Sends a draft for a being generated text message; for bots only
+func (client *Client) SendTextMessageDraft(ctx context.Context, req *SendTextMessageDraftRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -7665,7 +8425,7 @@ type ViewMessagesRequest struct {
 	MessageIds []int64 `json:"message_ids"`
 	// Source of the message view; pass null to guess the source based on chat open state
 	Source MessageSource `json:"source"`
-	// Pass true to mark as read the specified messages even the chat is closed
+	// Pass true to mark as read the specified messages even if the chat is closed
 	ForceRead bool `json:"force_read"`
 }
 
@@ -7835,11 +8595,20 @@ func (client *Client) GetInternalLinkType(ctx context.Context, req *GetInternalL
 	case ConstructorInternalLinkTypeDefaultMessageAutoDeleteTimerSettings:
 		return UnmarshalInternalLinkTypeDefaultMessageAutoDeleteTimerSettings(result.Data)
 
+	case ConstructorInternalLinkTypeDirectMessagesChat:
+		return UnmarshalInternalLinkTypeDirectMessagesChat(result.Data)
+
 	case ConstructorInternalLinkTypeEditProfileSettings:
 		return UnmarshalInternalLinkTypeEditProfileSettings(result.Data)
 
 	case ConstructorInternalLinkTypeGame:
 		return UnmarshalInternalLinkTypeGame(result.Data)
+
+	case ConstructorInternalLinkTypeGiftCollection:
+		return UnmarshalInternalLinkTypeGiftCollection(result.Data)
+
+	case ConstructorInternalLinkTypeGroupCall:
+		return UnmarshalInternalLinkTypeGroupCall(result.Data)
 
 	case ConstructorInternalLinkTypeInstantView:
 		return UnmarshalInternalLinkTypeInstantView(result.Data)
@@ -7861,6 +8630,12 @@ func (client *Client) GetInternalLinkType(ctx context.Context, req *GetInternalL
 
 	case ConstructorInternalLinkTypeMessageDraft:
 		return UnmarshalInternalLinkTypeMessageDraft(result.Data)
+
+	case ConstructorInternalLinkTypeMyStars:
+		return UnmarshalInternalLinkTypeMyStars(result.Data)
+
+	case ConstructorInternalLinkTypeMyToncoins:
+		return UnmarshalInternalLinkTypeMyToncoins(result.Data)
 
 	case ConstructorInternalLinkTypePassportDataRequest:
 		return UnmarshalInternalLinkTypePassportDataRequest(result.Data)
@@ -7900,6 +8675,9 @@ func (client *Client) GetInternalLinkType(ctx context.Context, req *GetInternalL
 
 	case ConstructorInternalLinkTypeStory:
 		return UnmarshalInternalLinkTypeStory(result.Data)
+
+	case ConstructorInternalLinkTypeStoryAlbum:
+		return UnmarshalInternalLinkTypeStoryAlbum(result.Data)
 
 	case ConstructorInternalLinkTypeTheme:
 		return UnmarshalInternalLinkTypeTheme(result.Data)
@@ -8016,32 +8794,6 @@ func (client *Client) ReadAllChatMentions(ctx context.Context, req *ReadAllChatM
 	return UnmarshalOk(result.Data)
 }
 
-type ReadAllMessageThreadMentionsRequest struct {
-	request
-	// Chat identifier
-	ChatId int64 `json:"chat_id"`
-	// Message thread identifier in which mentions are marked as read
-	MessageThreadId int64 `json:"message_thread_id"`
-}
-
-func (req ReadAllMessageThreadMentionsRequest) GetFunctionName() string {
-	return "readAllMessageThreadMentions"
-}
-
-// Marks all mentions in a forum topic as read
-func (client *Client) ReadAllMessageThreadMentions(ctx context.Context, req *ReadAllMessageThreadMentionsRequest) (*Ok, error) {
-	result, err := client.Send(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	if result.MetaType == "error" {
-		return nil, buildResponseError(result.Data)
-	}
-
-	return UnmarshalOk(result.Data)
-}
-
 type ReadAllChatReactionsRequest struct {
 	request
 	// Chat identifier
@@ -8052,34 +8804,8 @@ func (req ReadAllChatReactionsRequest) GetFunctionName() string {
 	return "readAllChatReactions"
 }
 
-// Marks all reactions in a chat or a forum topic as read
+// Marks all reactions in a chat as read
 func (client *Client) ReadAllChatReactions(ctx context.Context, req *ReadAllChatReactionsRequest) (*Ok, error) {
-	result, err := client.Send(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	if result.MetaType == "error" {
-		return nil, buildResponseError(result.Data)
-	}
-
-	return UnmarshalOk(result.Data)
-}
-
-type ReadAllMessageThreadReactionsRequest struct {
-	request
-	// Chat identifier
-	ChatId int64 `json:"chat_id"`
-	// Message thread identifier in which reactions are marked as read
-	MessageThreadId int64 `json:"message_thread_id"`
-}
-
-func (req ReadAllMessageThreadReactionsRequest) GetFunctionName() string {
-	return "readAllMessageThreadReactions"
-}
-
-// Marks all reactions in a forum topic as read
-func (client *Client) ReadAllMessageThreadReactions(ctx context.Context, req *ReadAllMessageThreadReactionsRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -9130,12 +9856,38 @@ func (client *Client) DeleteChatBackground(ctx context.Context, req *DeleteChatB
 	return UnmarshalOk(result.Data)
 }
 
+type GetGiftChatThemesRequest struct {
+	request
+	// Offset of the first entry to return as received from the previous request; use empty string to get the first chunk of results
+	Offset string `json:"offset"`
+	// The maximum number of chat themes to return
+	Limit int32 `json:"limit"`
+}
+
+func (req GetGiftChatThemesRequest) GetFunctionName() string {
+	return "getGiftChatThemes"
+}
+
+// Returns available to the current user gift chat themes
+func (client *Client) GetGiftChatThemes(ctx context.Context, req *GetGiftChatThemesRequest) (*GiftChatThemes, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalGiftChatThemes(result.Data)
+}
+
 type SetChatThemeRequest struct {
 	request
 	// Chat identifier
 	ChatId int64 `json:"chat_id"`
-	// Name of the new chat theme; pass an empty string to return the default theme
-	ThemeName string `json:"theme_name"`
+	// New chat theme; pass null to return the default theme
+	Theme InputChatTheme `json:"theme"`
 }
 
 func (req SetChatThemeRequest) GetFunctionName() string {
@@ -9160,8 +9912,8 @@ type SetChatDraftMessageRequest struct {
 	request
 	// Chat identifier
 	ChatId int64 `json:"chat_id"`
-	// If not 0, the message thread identifier in which the draft was changed
-	MessageThreadId int64 `json:"message_thread_id"`
+	// Topic in which the draft will be changed; pass null to change the draft for the chat itself
+	TopicId MessageTopic `json:"topic_id"`
 	// New draft message; pass null to remove the draft. All files in draft message content must be of the type inputFileLocal. Media thumbnails and captions are ignored
 	DraftMessage *DraftMessage `json:"draft_message"`
 }
@@ -9170,7 +9922,7 @@ func (req SetChatDraftMessageRequest) GetFunctionName() string {
 	return "setChatDraftMessage"
 }
 
-// Changes the draft message in a chat
+// Changes the draft message in a chat or a topic
 func (client *Client) SetChatDraftMessage(ctx context.Context, req *SetChatDraftMessageRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -9444,6 +10196,34 @@ func (client *Client) SetChatDiscussionGroup(ctx context.Context, req *SetChatDi
 	return UnmarshalOk(result.Data)
 }
 
+type SetChatDirectMessagesGroupRequest struct {
+	request
+	// Identifier of the channel chat
+	ChatId int64 `json:"chat_id"`
+	// Pass true if the direct messages group is enabled for the channel chat; pass false otherwise
+	IsEnabled bool `json:"is_enabled"`
+	// The new number of Telegram Stars that must be paid for each message that is sent to the direct messages chat unless the sender is an administrator of the channel chat; 0-getOption("paid_message_star_count_max"). The channel will receive getOption("paid_message_earnings_per_mille") Telegram Stars for each 1000 Telegram Stars paid for message sending. Requires supergroupFullInfo.can_enable_paid_messages for positive amounts
+	PaidMessageStarCount int64 `json:"paid_message_star_count"`
+}
+
+func (req SetChatDirectMessagesGroupRequest) GetFunctionName() string {
+	return "setChatDirectMessagesGroup"
+}
+
+// Changes direct messages group settings for a channel chat; requires owner privileges in the chat
+func (client *Client) SetChatDirectMessagesGroup(ctx context.Context, req *SetChatDirectMessagesGroupRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
 type SetChatLocationRequest struct {
 	request
 	// Chat identifier
@@ -9474,7 +10254,7 @@ type SetChatSlowModeDelayRequest struct {
 	request
 	// Chat identifier
 	ChatId int64 `json:"chat_id"`
-	// New slow mode delay for the chat, in seconds; must be one of 0, 10, 30, 60, 300, 900, 3600
+	// New slow mode delay for the chat, in seconds; must be one of 0, 5, 10, 30, 60, 300, 900, 3600
 	SlowModeDelay int32 `json:"slow_mode_delay"`
 }
 
@@ -9482,7 +10262,7 @@ func (req SetChatSlowModeDelayRequest) GetFunctionName() string {
 	return "setChatSlowModeDelay"
 }
 
-// Changes the slow mode delay of a chat. Available only for supergroups; requires can_restrict_members right
+// Changes the slow mode delay of a chat. Available only for supergroups; requires can_restrict_members administrator right
 func (client *Client) SetChatSlowModeDelay(ctx context.Context, req *SetChatSlowModeDelayRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -9564,32 +10344,6 @@ func (req UnpinAllChatMessagesRequest) GetFunctionName() string {
 
 // Removes all pinned messages from a chat; requires can_pin_messages member right if the chat is a basic group or supergroup, or can_edit_messages administrator right if the chat is a channel
 func (client *Client) UnpinAllChatMessages(ctx context.Context, req *UnpinAllChatMessagesRequest) (*Ok, error) {
-	result, err := client.Send(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	if result.MetaType == "error" {
-		return nil, buildResponseError(result.Data)
-	}
-
-	return UnmarshalOk(result.Data)
-}
-
-type UnpinAllMessageThreadMessagesRequest struct {
-	request
-	// Identifier of the chat
-	ChatId int64 `json:"chat_id"`
-	// Message thread identifier in which messages will be unpinned
-	MessageThreadId int64 `json:"message_thread_id"`
-}
-
-func (req UnpinAllMessageThreadMessagesRequest) GetFunctionName() string {
-	return "unpinAllMessageThreadMessages"
-}
-
-// Removes all pinned messages from a forum topic; requires can_pin_messages member right in the supergroup
-func (client *Client) UnpinAllMessageThreadMessages(ctx context.Context, req *UnpinAllMessageThreadMessagesRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -10255,7 +11009,7 @@ func (client *Client) GetCurrentWeather(ctx context.Context, req *GetCurrentWeat
 type GetStoryRequest struct {
 	request
 	// Identifier of the chat that posted the story
-	StorySenderChatId int64 `json:"story_sender_chat_id"`
+	StoryPosterChatId int64 `json:"story_poster_chat_id"`
 	// Story identifier
 	StoryId int32 `json:"story_id"`
 	// Pass true to get only locally available information without sending network requests
@@ -10280,17 +11034,17 @@ func (client *Client) GetStory(ctx context.Context, req *GetStoryRequest) (*Stor
 	return UnmarshalStory(result.Data)
 }
 
-type GetChatsToSendStoriesRequest struct {
+type GetChatsToPostStoriesRequest struct {
 	request
 }
 
-func (req GetChatsToSendStoriesRequest) GetFunctionName() string {
-	return "getChatsToSendStories"
+func (req GetChatsToPostStoriesRequest) GetFunctionName() string {
+	return "getChatsToPostStories"
 }
 
-// Returns supergroup and channel chats in which the current user has the right to post stories. The chats must be rechecked with canSendStory before actually trying to post a story there
-func (client *Client) GetChatsToSendStories(ctx context.Context) (*Chats, error) {
-	req := &GetChatsToSendStoriesRequest{}
+// Returns supergroup and channel chats in which the current user has the right to post stories. The chats must be rechecked with canPostStory before actually trying to post a story there
+func (client *Client) GetChatsToPostStories(ctx context.Context) (*Chats, error) {
+	req := &GetChatsToPostStoriesRequest{}
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -10303,18 +11057,18 @@ func (client *Client) GetChatsToSendStories(ctx context.Context) (*Chats, error)
 	return UnmarshalChats(result.Data)
 }
 
-type CanSendStoryRequest struct {
+type CanPostStoryRequest struct {
 	request
 	// Chat identifier. Pass Saved Messages chat identifier when posting a story on behalf of the current user
 	ChatId int64 `json:"chat_id"`
 }
 
-func (req CanSendStoryRequest) GetFunctionName() string {
-	return "canSendStory"
+func (req CanPostStoryRequest) GetFunctionName() string {
+	return "canPostStory"
 }
 
-// Checks whether the current user can send a story on behalf of a chat; requires can_post_stories right for supergroup and channel chats
-func (client *Client) CanSendStory(ctx context.Context, req *CanSendStoryRequest) (CanSendStoryResult, error) {
+// Checks whether the current user can post a story on behalf of a chat; requires can_post_stories administrator right for supergroup and channel chats
+func (client *Client) CanPostStory(ctx context.Context, req *CanPostStoryRequest) (CanPostStoryResult, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -10325,30 +11079,30 @@ func (client *Client) CanSendStory(ctx context.Context, req *CanSendStoryRequest
 	}
 
 	switch result.MetaType {
-	case ConstructorCanSendStoryResultOk:
-		return UnmarshalCanSendStoryResultOk(result.Data)
+	case ConstructorCanPostStoryResultOk:
+		return UnmarshalCanPostStoryResultOk(result.Data)
 
-	case ConstructorCanSendStoryResultPremiumNeeded:
-		return UnmarshalCanSendStoryResultPremiumNeeded(result.Data)
+	case ConstructorCanPostStoryResultPremiumNeeded:
+		return UnmarshalCanPostStoryResultPremiumNeeded(result.Data)
 
-	case ConstructorCanSendStoryResultBoostNeeded:
-		return UnmarshalCanSendStoryResultBoostNeeded(result.Data)
+	case ConstructorCanPostStoryResultBoostNeeded:
+		return UnmarshalCanPostStoryResultBoostNeeded(result.Data)
 
-	case ConstructorCanSendStoryResultActiveStoryLimitExceeded:
-		return UnmarshalCanSendStoryResultActiveStoryLimitExceeded(result.Data)
+	case ConstructorCanPostStoryResultActiveStoryLimitExceeded:
+		return UnmarshalCanPostStoryResultActiveStoryLimitExceeded(result.Data)
 
-	case ConstructorCanSendStoryResultWeeklyLimitExceeded:
-		return UnmarshalCanSendStoryResultWeeklyLimitExceeded(result.Data)
+	case ConstructorCanPostStoryResultWeeklyLimitExceeded:
+		return UnmarshalCanPostStoryResultWeeklyLimitExceeded(result.Data)
 
-	case ConstructorCanSendStoryResultMonthlyLimitExceeded:
-		return UnmarshalCanSendStoryResultMonthlyLimitExceeded(result.Data)
+	case ConstructorCanPostStoryResultMonthlyLimitExceeded:
+		return UnmarshalCanPostStoryResultMonthlyLimitExceeded(result.Data)
 
 	default:
 		return nil, errors.New("invalid type")
 	}
 }
 
-type SendStoryRequest struct {
+type PostStoryRequest struct {
 	request
 	// Identifier of the chat that will post the story. Pass Saved Messages chat identifier when posting a story on behalf of the current user
 	ChatId int64 `json:"chat_id"`
@@ -10358,8 +11112,10 @@ type SendStoryRequest struct {
 	Areas *InputStoryAreas `json:"areas"`
 	// Story caption; pass null to use an empty caption; 0-getOption("story_caption_length_max") characters; can have entities only if getOption("can_use_text_entities_in_story_caption")
 	Caption *FormattedText `json:"caption"`
-	// The privacy settings for the story; ignored for stories sent to supergroup and channel chats
+	// The privacy settings for the story; ignored for stories posted on behalf of supergroup and channel chats
 	PrivacySettings StoryPrivacySettings `json:"privacy_settings"`
+	// Identifiers of story albums to which the story will be added upon posting. An album can have up to getOption("story_album_story_count_max")
+	AlbumIds []int32 `json:"album_ids"`
 	// Period after which the story is moved to archive, in seconds; must be one of 6 * 3600, 12 * 3600, 86400, or 2 * 86400 for Telegram Premium users, and 86400 otherwise
 	ActivePeriod int32 `json:"active_period"`
 	// Full identifier of the original story, which content was used to create the story; pass null if the story isn't repost of another story
@@ -10370,12 +11126,12 @@ type SendStoryRequest struct {
 	ProtectContent bool `json:"protect_content"`
 }
 
-func (req SendStoryRequest) GetFunctionName() string {
-	return "sendStory"
+func (req PostStoryRequest) GetFunctionName() string {
+	return "postStory"
 }
 
-// Sends a new story to a chat; requires can_post_stories right for supergroup and channel chats. Returns a temporary story
-func (client *Client) SendStory(ctx context.Context, req *SendStoryRequest) (*Story, error) {
+// Posts a new story on behalf of a chat; requires can_post_stories administrator right for supergroup and channel chats. Returns a temporary story
+func (client *Client) PostStory(ctx context.Context, req *PostStoryRequest) (*Story, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -10391,7 +11147,7 @@ func (client *Client) SendStory(ctx context.Context, req *SendStoryRequest) (*St
 type EditStoryRequest struct {
 	request
 	// Identifier of the chat that posted the story
-	StorySenderChatId int64 `json:"story_sender_chat_id"`
+	StoryPosterChatId int64 `json:"story_poster_chat_id"`
 	// Identifier of the story to edit
 	StoryId int32 `json:"story_id"`
 	// New content of the story; pass null to keep the current content
@@ -10423,7 +11179,7 @@ func (client *Client) EditStory(ctx context.Context, req *EditStoryRequest) (*Ok
 type EditStoryCoverRequest struct {
 	request
 	// Identifier of the chat that posted the story
-	StorySenderChatId int64 `json:"story_sender_chat_id"`
+	StoryPosterChatId int64 `json:"story_poster_chat_id"`
 	// Identifier of the story to edit
 	StoryId int32 `json:"story_id"`
 	// New timestamp of the frame, which will be used as video thumbnail
@@ -10477,7 +11233,7 @@ func (client *Client) SetStoryPrivacySettings(ctx context.Context, req *SetStory
 type ToggleStoryIsPostedToChatPageRequest struct {
 	request
 	// Identifier of the chat that posted the story
-	StorySenderChatId int64 `json:"story_sender_chat_id"`
+	StoryPosterChatId int64 `json:"story_poster_chat_id"`
 	// Identifier of the story
 	StoryId int32 `json:"story_id"`
 	// Pass true to make the story accessible after expiration; pass false to make it private
@@ -10505,7 +11261,7 @@ func (client *Client) ToggleStoryIsPostedToChatPage(ctx context.Context, req *To
 type DeleteStoryRequest struct {
 	request
 	// Identifier of the chat that posted the story
-	StorySenderChatId int64 `json:"story_sender_chat_id"`
+	StoryPosterChatId int64 `json:"story_poster_chat_id"`
 	// Identifier of the story to delete
 	StoryId int32 `json:"story_id"`
 }
@@ -10514,7 +11270,7 @@ func (req DeleteStoryRequest) GetFunctionName() string {
 	return "deleteStory"
 }
 
-// Deletes a previously sent story. Can be called only if story.can_be_deleted == true
+// Deletes a previously posted story. Can be called only if story.can_be_deleted == true
 func (client *Client) DeleteStory(ctx context.Context, req *DeleteStoryRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -10561,7 +11317,7 @@ func (req LoadActiveStoriesRequest) GetFunctionName() string {
 	return "loadActiveStories"
 }
 
-// Loads more active stories from a story list. The loaded stories will be sent through updates. Active stories are sorted by the pair (active_stories.order, active_stories.story_sender_chat_id) in descending order. Returns a 404 error if all active stories have been loaded
+// Loads more active stories from a story list. The loaded stories will be sent through updates. Active stories are sorted by the pair (active_stories.order, active_stories.story_poster_chat_id) in descending order. Returns a 404 error if all active stories have been loaded
 func (client *Client) LoadActiveStories(ctx context.Context, req *LoadActiveStoriesRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -10667,7 +11423,7 @@ func (req GetChatArchivedStoriesRequest) GetFunctionName() string {
 	return "getChatArchivedStories"
 }
 
-// Returns the list of all stories posted by the given chat; requires can_edit_stories right in the chat. The stories are returned in reverse chronological order (i.e., in order of decreasing story_id). For optimal performance, the number of returned stories is chosen by TDLib
+// Returns the list of all stories posted by the given chat; requires can_edit_stories administrator right in the chat. The stories are returned in reverse chronological order (i.e., in order of decreasing story_id). For optimal performance, the number of returned stories is chosen by TDLib
 func (client *Client) GetChatArchivedStories(ctx context.Context, req *GetChatArchivedStoriesRequest) (*Stories, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -10693,7 +11449,7 @@ func (req SetChatPinnedStoriesRequest) GetFunctionName() string {
 	return "setChatPinnedStories"
 }
 
-// Changes the list of pinned stories on a chat page; requires can_edit_stories right in the chat
+// Changes the list of pinned stories on a chat page; requires can_edit_stories administrator right in the chat
 func (client *Client) SetChatPinnedStories(ctx context.Context, req *SetChatPinnedStoriesRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -10709,8 +11465,8 @@ func (client *Client) SetChatPinnedStories(ctx context.Context, req *SetChatPinn
 
 type OpenStoryRequest struct {
 	request
-	// The identifier of the sender of the opened story
-	StorySenderChatId int64 `json:"story_sender_chat_id"`
+	// The identifier of the chat that posted the opened story
+	StoryPosterChatId int64 `json:"story_poster_chat_id"`
 	// The identifier of the story
 	StoryId int32 `json:"story_id"`
 }
@@ -10735,8 +11491,8 @@ func (client *Client) OpenStory(ctx context.Context, req *OpenStoryRequest) (*Ok
 
 type CloseStoryRequest struct {
 	request
-	// The identifier of the sender of the story to close
-	StorySenderChatId int64 `json:"story_sender_chat_id"`
+	// The identifier of the poster of the story to close
+	StoryPosterChatId int64 `json:"story_poster_chat_id"`
 	// The identifier of the story
 	StoryId int32 `json:"story_id"`
 }
@@ -10785,8 +11541,8 @@ func (client *Client) GetStoryAvailableReactions(ctx context.Context, req *GetSt
 
 type SetStoryReactionRequest struct {
 	request
-	// The identifier of the sender of the story
-	StorySenderChatId int64 `json:"story_sender_chat_id"`
+	// The identifier of the poster of the story
+	StoryPosterChatId int64 `json:"story_poster_chat_id"`
 	// The identifier of the story
 	StoryId int32 `json:"story_id"`
 	// Type of the reaction to set; pass null to remove the reaction. Custom emoji reactions can be used only by Telegram Premium users. Paid reactions can't be set
@@ -10851,8 +11607,8 @@ func (client *Client) GetStoryInteractions(ctx context.Context, req *GetStoryInt
 
 type GetChatStoryInteractionsRequest struct {
 	request
-	// The identifier of the sender of the story
-	StorySenderChatId int64 `json:"story_sender_chat_id"`
+	// The identifier of the poster of the story
+	StoryPosterChatId int64 `json:"story_poster_chat_id"`
 	// Story identifier
 	StoryId int32 `json:"story_id"`
 	// Pass the default heart reaction or a suggested reaction type to receive only interactions with the specified reaction type; pass null to receive all interactions; reactionTypePaid isn't supported
@@ -10885,8 +11641,8 @@ func (client *Client) GetChatStoryInteractions(ctx context.Context, req *GetChat
 
 type ReportStoryRequest struct {
 	request
-	// The identifier of the sender of the story to report
-	StorySenderChatId int64 `json:"story_sender_chat_id"`
+	// The identifier of the poster of the story to report
+	StoryPosterChatId int64 `json:"story_poster_chat_id"`
 	// The identifier of the story to report
 	StoryId int32 `json:"story_id"`
 	// Option identifier chosen by the user; leave empty for the initial request
@@ -10950,8 +11706,8 @@ func (client *Client) ActivateStoryStealthMode(ctx context.Context) (*Ok, error)
 
 type GetStoryPublicForwardsRequest struct {
 	request
-	// The identifier of the sender of the story
-	StorySenderChatId int64 `json:"story_sender_chat_id"`
+	// The identifier of the poster of the story
+	StoryPosterChatId int64 `json:"story_poster_chat_id"`
 	// The identifier of the story
 	StoryId int32 `json:"story_id"`
 	// Offset of the first entry to return as received from the previous request; use empty string to get the first chunk of results
@@ -10976,6 +11732,252 @@ func (client *Client) GetStoryPublicForwards(ctx context.Context, req *GetStoryP
 	}
 
 	return UnmarshalPublicForwards(result.Data)
+}
+
+type GetChatStoryAlbumsRequest struct {
+	request
+	// Chat identifier
+	ChatId int64 `json:"chat_id"`
+}
+
+func (req GetChatStoryAlbumsRequest) GetFunctionName() string {
+	return "getChatStoryAlbums"
+}
+
+// Returns the list of story albums owned by the given chat
+func (client *Client) GetChatStoryAlbums(ctx context.Context, req *GetChatStoryAlbumsRequest) (*StoryAlbums, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalStoryAlbums(result.Data)
+}
+
+type GetStoryAlbumStoriesRequest struct {
+	request
+	// Chat identifier
+	ChatId int64 `json:"chat_id"`
+	// Story album identifier
+	StoryAlbumId int32 `json:"story_album_id"`
+	// Offset of the first entry to return; use 0 to get results from the first album story
+	Offset int32 `json:"offset"`
+	// The maximum number of stories to be returned. For optimal performance, the number of returned stories is chosen by TDLib and can be smaller than the specified limit
+	Limit int32 `json:"limit"`
+}
+
+func (req GetStoryAlbumStoriesRequest) GetFunctionName() string {
+	return "getStoryAlbumStories"
+}
+
+// Returns the list of stories added to the given story album. For optimal performance, the number of returned stories is chosen by TDLib
+func (client *Client) GetStoryAlbumStories(ctx context.Context, req *GetStoryAlbumStoriesRequest) (*Stories, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalStories(result.Data)
+}
+
+type CreateStoryAlbumRequest struct {
+	request
+	// Identifier of the chat that posted the stories
+	StoryPosterChatId int64 `json:"story_poster_chat_id"`
+	// Name of the album; 1-12 characters
+	Name string `json:"name"`
+	// Identifiers of stories to add to the album; 0-getOption("story_album_story_count_max") identifiers
+	StoryIds []int32 `json:"story_ids"`
+}
+
+func (req CreateStoryAlbumRequest) GetFunctionName() string {
+	return "createStoryAlbum"
+}
+
+// Creates an album of stories; requires can_edit_stories administrator right for supergroup and channel chats
+func (client *Client) CreateStoryAlbum(ctx context.Context, req *CreateStoryAlbumRequest) (*StoryAlbum, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalStoryAlbum(result.Data)
+}
+
+type ReorderStoryAlbumsRequest struct {
+	request
+	// Identifier of the chat that owns the stories
+	ChatId int64 `json:"chat_id"`
+	// New order of story albums
+	StoryAlbumIds []int32 `json:"story_album_ids"`
+}
+
+func (req ReorderStoryAlbumsRequest) GetFunctionName() string {
+	return "reorderStoryAlbums"
+}
+
+// Changes order of story albums. If the albums are owned by a supergroup or a channel chat, then requires can_edit_stories administrator right in the chat
+func (client *Client) ReorderStoryAlbums(ctx context.Context, req *ReorderStoryAlbumsRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type DeleteStoryAlbumRequest struct {
+	request
+	// Identifier of the chat that owns the stories
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the story album
+	StoryAlbumId int32 `json:"story_album_id"`
+}
+
+func (req DeleteStoryAlbumRequest) GetFunctionName() string {
+	return "deleteStoryAlbum"
+}
+
+// Deletes a story album. If the album is owned by a supergroup or a channel chat, then requires can_edit_stories administrator right in the chat
+func (client *Client) DeleteStoryAlbum(ctx context.Context, req *DeleteStoryAlbumRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type SetStoryAlbumNameRequest struct {
+	request
+	// Identifier of the chat that owns the stories
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the story album
+	StoryAlbumId int32 `json:"story_album_id"`
+	// New name of the album; 1-12 characters
+	Name string `json:"name"`
+}
+
+func (req SetStoryAlbumNameRequest) GetFunctionName() string {
+	return "setStoryAlbumName"
+}
+
+// Changes name of an album of stories. If the album is owned by a supergroup or a channel chat, then requires can_edit_stories administrator right in the chat. Returns the changed album
+func (client *Client) SetStoryAlbumName(ctx context.Context, req *SetStoryAlbumNameRequest) (*StoryAlbum, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalStoryAlbum(result.Data)
+}
+
+type AddStoryAlbumStoriesRequest struct {
+	request
+	// Identifier of the chat that owns the stories
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the story album
+	StoryAlbumId int32 `json:"story_album_id"`
+	// Identifier of the stories to add to the album; 1-getOption("story_album_story_count_max") identifiers. If after addition the album has more than getOption("story_album_story_count_max") stories, then the last one are removed from the album
+	StoryIds []int32 `json:"story_ids"`
+}
+
+func (req AddStoryAlbumStoriesRequest) GetFunctionName() string {
+	return "addStoryAlbumStories"
+}
+
+// Adds stories to the beginning of a previously created story album. If the album is owned by a supergroup or a channel chat, then requires can_edit_stories administrator right in the chat. Returns the changed album
+func (client *Client) AddStoryAlbumStories(ctx context.Context, req *AddStoryAlbumStoriesRequest) (*StoryAlbum, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalStoryAlbum(result.Data)
+}
+
+type RemoveStoryAlbumStoriesRequest struct {
+	request
+	// Identifier of the chat that owns the stories
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the story album
+	StoryAlbumId int32 `json:"story_album_id"`
+	// Identifier of the stories to remove from the album
+	StoryIds []int32 `json:"story_ids"`
+}
+
+func (req RemoveStoryAlbumStoriesRequest) GetFunctionName() string {
+	return "removeStoryAlbumStories"
+}
+
+// Removes stories from an album. If the album is owned by a supergroup or a channel chat, then requires can_edit_stories administrator right in the chat. Returns the changed album
+func (client *Client) RemoveStoryAlbumStories(ctx context.Context, req *RemoveStoryAlbumStoriesRequest) (*StoryAlbum, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalStoryAlbum(result.Data)
+}
+
+type ReorderStoryAlbumStoriesRequest struct {
+	request
+	// Identifier of the chat that owns the stories
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the story album
+	StoryAlbumId int32 `json:"story_album_id"`
+	// Identifier of the stories to move to the beginning of the album. All other stories are placed in the current order after the specified stories
+	StoryIds []int32 `json:"story_ids"`
+}
+
+func (req ReorderStoryAlbumStoriesRequest) GetFunctionName() string {
+	return "reorderStoryAlbumStories"
+}
+
+// Changes order of stories in an album. If the album is owned by a supergroup or a channel chat, then requires can_edit_stories administrator right in the chat. Returns the changed album
+func (client *Client) ReorderStoryAlbumStories(ctx context.Context, req *ReorderStoryAlbumStoriesRequest) (*StoryAlbum, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalStoryAlbum(result.Data)
 }
 
 type GetChatBoostLevelFeaturesRequest struct {
@@ -11426,7 +12428,7 @@ func (req GetDisallowedChatEmojiStatusesRequest) GetFunctionName() string {
 	return "getDisallowedChatEmojiStatuses"
 }
 
-// Returns the list of emoji statuses, which can't be used as chat emoji status, even they are from a sticker set with is_allowed_as_chat_emoji_status == true
+// Returns the list of emoji statuses, which can't be used as chat emoji status, even if they are from a sticker set with is_allowed_as_chat_emoji_status == true
 func (client *Client) GetDisallowedChatEmojiStatuses(ctx context.Context) (*EmojiStatusCustomEmojis, error) {
 	req := &GetDisallowedChatEmojiStatusesRequest{}
 	result, err := client.Send(ctx, req)
@@ -11700,7 +12702,7 @@ func (req ReadFilePartRequest) GetFunctionName() string {
 }
 
 // Reads a part of a file from the TDLib file cache and returns read bytes. This method is intended to be used only if the application has no direct access to TDLib's file system, because it is usually slower than a direct read from the file
-func (client *Client) ReadFilePart(ctx context.Context, req *ReadFilePartRequest) (*FilePart, error) {
+func (client *Client) ReadFilePart(ctx context.Context, req *ReadFilePartRequest) (*Data, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -11710,7 +12712,7 @@ func (client *Client) ReadFilePart(ctx context.Context, req *ReadFilePartRequest
 		return nil, buildResponseError(result.Data)
 	}
 
-	return UnmarshalFilePart(result.Data)
+	return UnmarshalData(result.Data)
 }
 
 type DeleteFileRequest struct {
@@ -11907,7 +12909,7 @@ type SetApplicationVerificationTokenRequest struct {
 	request
 	// Unique identifier for the verification process as received from updateApplicationVerificationRequired or updateApplicationRecaptchaVerificationRequired
 	VerificationId int64 `json:"verification_id"`
-	// Play Integrity API token for the Android application, or secret from push notification for the iOS application for application verification, or reCAPTCHA token for reCAPTCHA verifications; pass an empty string to abort verification and receive error VERIFICATION_FAILED for the request
+	// Play Integrity API token for the Android application, or secret from push notification for the iOS application for application verification, or reCAPTCHA token for reCAPTCHA verifications; pass an empty string to abort verification and receive the error "VERIFICATION_FAILED" for the request
 	Token string `json:"token"`
 }
 
@@ -12493,6 +13495,90 @@ func (client *Client) ProcessChatJoinRequests(ctx context.Context, req *ProcessC
 	return UnmarshalOk(result.Data)
 }
 
+type ApproveSuggestedPostRequest struct {
+	request
+	// Chat identifier of the channel direct messages chat
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the message with the suggested post. Use messageProperties.can_be_approved to check whether the suggested post can be approved
+	MessageId int64 `json:"message_id"`
+	// Point in time (Unix timestamp) when the post is expected to be published; pass 0 if the date has already been chosen. If specified, then the date must be in the future, but at most getOption("suggested_post_send_delay_max") seconds in the future
+	SendDate int32 `json:"send_date"`
+}
+
+func (req ApproveSuggestedPostRequest) GetFunctionName() string {
+	return "approveSuggestedPost"
+}
+
+// Approves a suggested post in a channel direct messages chat
+func (client *Client) ApproveSuggestedPost(ctx context.Context, req *ApproveSuggestedPostRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type DeclineSuggestedPostRequest struct {
+	request
+	// Chat identifier of the channel direct messages chat
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the message with the suggested post. Use messageProperties.can_be_declined to check whether the suggested post can be declined
+	MessageId int64 `json:"message_id"`
+	// Comment for the creator of the suggested post; 0-128 characters
+	Comment string `json:"comment"`
+}
+
+func (req DeclineSuggestedPostRequest) GetFunctionName() string {
+	return "declineSuggestedPost"
+}
+
+// Declines a suggested post in a channel direct messages chat
+func (client *Client) DeclineSuggestedPost(ctx context.Context, req *DeclineSuggestedPostRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type AddOfferRequest struct {
+	request
+	// Identifier of the channel direct messages chat
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the message in the chat which will be sent as suggested post. Use messageProperties.can_add_offer to check whether an offer can be added or messageProperties.can_edit_suggested_post_info to check whether price or time of sending of the post can be changed
+	MessageId int64 `json:"message_id"`
+	// Options to be used to send the message. New information about the suggested post must always be specified
+	Options *MessageSendOptions `json:"options"`
+}
+
+func (req AddOfferRequest) GetFunctionName() string {
+	return "addOffer"
+}
+
+// Sent a suggested post based on a previously sent message in a channel direct messages chat. Can be also used to suggest price or time change for an existing suggested post. Returns the sent message
+func (client *Client) AddOffer(ctx context.Context, req *AddOfferRequest) (*Message, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalMessage(result.Data)
+}
+
 type CreateCallRequest struct {
 	request
 	// Identifier of the user to be called
@@ -12501,8 +13587,6 @@ type CreateCallRequest struct {
 	Protocol *CallProtocol `json:"protocol"`
 	// Pass true to create a video call
 	IsVideo bool `json:"is_video"`
-	// Identifier of the group call to which the user will be added after exchanging private key via the call; pass 0 if none
-	GroupCallId int32 `json:"group_call_id"`
 }
 
 func (req CreateCallRequest) GetFunctionName() string {
@@ -12581,6 +13665,8 @@ type DiscardCallRequest struct {
 	CallId int32 `json:"call_id"`
 	// Pass true if the user was disconnected
 	IsDisconnected bool `json:"is_disconnected"`
+	// If the call was upgraded to a group call, pass invite link to the group call
+	InviteLink string `json:"invite_link"`
 	// The call duration, in seconds
 	Duration int32 `json:"duration"`
 	// Pass true if the call was a video call
@@ -12771,16 +13857,16 @@ func (client *Client) CreateVideoChat(ctx context.Context, req *CreateVideoChatR
 
 type CreateGroupCallRequest struct {
 	request
-	// Call identifier
-	CallId int32 `json:"call_id"`
+	// Parameters to join the call; pass null to only create call link without joining the call
+	JoinParameters *GroupCallJoinParameters `json:"join_parameters"`
 }
 
 func (req CreateGroupCallRequest) GetFunctionName() string {
 	return "createGroupCall"
 }
 
-// Creates a group call from a one-to-one call
-func (client *Client) CreateGroupCall(ctx context.Context, req *CreateGroupCallRequest) (*Ok, error) {
+// Creates a new group call that isn't bound to a chat
+func (client *Client) CreateGroupCall(ctx context.Context, req *CreateGroupCallRequest) (*GroupCallInfo, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -12790,7 +13876,7 @@ func (client *Client) CreateGroupCall(ctx context.Context, req *CreateGroupCallR
 		return nil, buildResponseError(result.Data)
 	}
 
-	return UnmarshalOk(result.Data)
+	return UnmarshalGroupCallInfo(result.Data)
 }
 
 type GetVideoChatRtmpUrlRequest struct {
@@ -12803,7 +13889,7 @@ func (req GetVideoChatRtmpUrlRequest) GetFunctionName() string {
 	return "getVideoChatRtmpUrl"
 }
 
-// Returns RTMP URL for streaming to the chat; requires can_manage_video_chats administrator right
+// Returns RTMP URL for streaming to the video chat of a chat; requires can_manage_video_chats administrator right
 func (client *Client) GetVideoChatRtmpUrl(ctx context.Context, req *GetVideoChatRtmpUrlRequest) (*RtmpUrl, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -12827,7 +13913,7 @@ func (req ReplaceVideoChatRtmpUrlRequest) GetFunctionName() string {
 	return "replaceVideoChatRtmpUrl"
 }
 
-// Replaces the current RTMP URL for streaming to the chat; requires owner privileges
+// Replaces the current RTMP URL for streaming to the video chat of a chat; requires owner privileges in the chat
 func (client *Client) ReplaceVideoChatRtmpUrl(ctx context.Context, req *ReplaceVideoChatRtmpUrlRequest) (*RtmpUrl, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -12865,18 +13951,18 @@ func (client *Client) GetGroupCall(ctx context.Context, req *GetGroupCallRequest
 	return UnmarshalGroupCall(result.Data)
 }
 
-type StartScheduledGroupCallRequest struct {
+type StartScheduledVideoChatRequest struct {
 	request
-	// Group call identifier
+	// Group call identifier of the video chat
 	GroupCallId int32 `json:"group_call_id"`
 }
 
-func (req StartScheduledGroupCallRequest) GetFunctionName() string {
-	return "startScheduledGroupCall"
+func (req StartScheduledVideoChatRequest) GetFunctionName() string {
+	return "startScheduledVideoChat"
 }
 
-// Starts a scheduled group call
-func (client *Client) StartScheduledGroupCall(ctx context.Context, req *StartScheduledGroupCallRequest) (*Ok, error) {
+// Starts a scheduled video chat
+func (client *Client) StartScheduledVideoChat(ctx context.Context, req *StartScheduledVideoChatRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -12889,7 +13975,7 @@ func (client *Client) StartScheduledGroupCall(ctx context.Context, req *StartSch
 	return UnmarshalOk(result.Data)
 }
 
-type ToggleGroupCallEnabledStartNotificationRequest struct {
+type ToggleVideoChatEnabledStartNotificationRequest struct {
 	request
 	// Group call identifier
 	GroupCallId int32 `json:"group_call_id"`
@@ -12897,12 +13983,12 @@ type ToggleGroupCallEnabledStartNotificationRequest struct {
 	EnabledStartNotification bool `json:"enabled_start_notification"`
 }
 
-func (req ToggleGroupCallEnabledStartNotificationRequest) GetFunctionName() string {
-	return "toggleGroupCallEnabledStartNotification"
+func (req ToggleVideoChatEnabledStartNotificationRequest) GetFunctionName() string {
+	return "toggleVideoChatEnabledStartNotification"
 }
 
-// Toggles whether the current user will receive a notification when the group call starts; scheduled group calls only
-func (client *Client) ToggleGroupCallEnabledStartNotification(ctx context.Context, req *ToggleGroupCallEnabledStartNotificationRequest) (*Ok, error) {
+// Toggles whether the current user will receive a notification when the video chat starts; for scheduled video chats only
+func (client *Client) ToggleVideoChatEnabledStartNotification(ctx context.Context, req *ToggleVideoChatEnabledStartNotificationRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -12917,30 +14003,48 @@ func (client *Client) ToggleGroupCallEnabledStartNotification(ctx context.Contex
 
 type JoinGroupCallRequest struct {
 	request
-	// Group call identifier
-	GroupCallId int32 `json:"group_call_id"`
-	// Identifier of a group call participant, which will be used to join the call; pass null to join as self; video chats only
-	ParticipantId MessageSender `json:"participant_id"`
-	// Caller audio channel synchronization source identifier; received from tgcalls
-	AudioSourceId int32 `json:"audio_source_id"`
-	// Group call join payload; received from tgcalls
-	Payload string `json:"payload"`
-	// Pass true to join the call with muted microphone
-	IsMuted bool `json:"is_muted"`
-	// Pass true if the user's video is enabled
-	IsMyVideoEnabled bool `json:"is_my_video_enabled"`
-	// If non-empty, invite hash to be used to join the group call without being muted by administrators
-	InviteHash string `json:"invite_hash"`
-	// Fingerprint of the encryption key for E2E group calls not bound to a chat; pass 0 for voice chats
-	KeyFingerprint JsonInt64 `json:"key_fingerprint"`
+	// The group call to join
+	InputGroupCall InputGroupCall `json:"input_group_call"`
+	// Parameters to join the call
+	JoinParameters *GroupCallJoinParameters `json:"join_parameters"`
 }
 
 func (req JoinGroupCallRequest) GetFunctionName() string {
 	return "joinGroupCall"
 }
 
-// Joins an active group call. Returns join response payload for tgcalls
-func (client *Client) JoinGroupCall(ctx context.Context, req *JoinGroupCallRequest) (*Text, error) {
+// Joins a group call that is not bound to a chat
+func (client *Client) JoinGroupCall(ctx context.Context, req *JoinGroupCallRequest) (*GroupCallInfo, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalGroupCallInfo(result.Data)
+}
+
+type JoinVideoChatRequest struct {
+	request
+	// Group call identifier
+	GroupCallId int32 `json:"group_call_id"`
+	// Identifier of a group call participant, which will be used to join the call; pass null to join as self; video chats only
+	ParticipantId MessageSender `json:"participant_id"`
+	// Parameters to join the call
+	JoinParameters *GroupCallJoinParameters `json:"join_parameters"`
+	// Invite hash as received from internalLinkTypeVideoChat
+	InviteHash string `json:"invite_hash"`
+}
+
+func (req JoinVideoChatRequest) GetFunctionName() string {
+	return "joinVideoChat"
+}
+
+// Joins an active video chat. Returns join response payload for tgcalls
+func (client *Client) JoinVideoChat(ctx context.Context, req *JoinVideoChatRequest) (*Text, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -13031,7 +14135,7 @@ func (client *Client) EndGroupCallScreenSharing(ctx context.Context, req *EndGro
 	return UnmarshalOk(result.Data)
 }
 
-type SetGroupCallTitleRequest struct {
+type SetVideoChatTitleRequest struct {
 	request
 	// Group call identifier
 	GroupCallId int32 `json:"group_call_id"`
@@ -13039,12 +14143,12 @@ type SetGroupCallTitleRequest struct {
 	Title string `json:"title"`
 }
 
-func (req SetGroupCallTitleRequest) GetFunctionName() string {
-	return "setGroupCallTitle"
+func (req SetVideoChatTitleRequest) GetFunctionName() string {
+	return "setVideoChatTitle"
 }
 
-// Sets group call title. Requires groupCall.can_be_managed group call flag
-func (client *Client) SetGroupCallTitle(ctx context.Context, req *SetGroupCallTitleRequest) (*Ok, error) {
+// Sets title of a video chat; requires groupCall.can_be_managed right
+func (client *Client) SetVideoChatTitle(ctx context.Context, req *SetVideoChatTitleRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -13057,7 +14161,7 @@ func (client *Client) SetGroupCallTitle(ctx context.Context, req *SetGroupCallTi
 	return UnmarshalOk(result.Data)
 }
 
-type ToggleGroupCallMuteNewParticipantsRequest struct {
+type ToggleVideoChatMuteNewParticipantsRequest struct {
 	request
 	// Group call identifier
 	GroupCallId int32 `json:"group_call_id"`
@@ -13065,12 +14169,12 @@ type ToggleGroupCallMuteNewParticipantsRequest struct {
 	MuteNewParticipants bool `json:"mute_new_participants"`
 }
 
-func (req ToggleGroupCallMuteNewParticipantsRequest) GetFunctionName() string {
-	return "toggleGroupCallMuteNewParticipants"
+func (req ToggleVideoChatMuteNewParticipantsRequest) GetFunctionName() string {
+	return "toggleVideoChatMuteNewParticipants"
 }
 
-// Toggles whether new participants of a group call can be unmuted only by administrators of the group call. Requires groupCall.can_toggle_mute_new_participants group call flag
-func (client *Client) ToggleGroupCallMuteNewParticipants(ctx context.Context, req *ToggleGroupCallMuteNewParticipantsRequest) (*Ok, error) {
+// Toggles whether new participants of a video chat can be unmuted only by administrators of the video chat. Requires groupCall.can_toggle_mute_new_participants right
+func (client *Client) ToggleVideoChatMuteNewParticipants(ctx context.Context, req *ToggleVideoChatMuteNewParticipantsRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -13083,7 +14187,154 @@ func (client *Client) ToggleGroupCallMuteNewParticipants(ctx context.Context, re
 	return UnmarshalOk(result.Data)
 }
 
-type InviteGroupCallParticipantsRequest struct {
+type ToggleGroupCallCanSendMessagesRequest struct {
+	request
+	// Group call identifier
+	GroupCallId int32 `json:"group_call_id"`
+	// New value of the can_send_messages setting
+	CanSendMessages bool `json:"can_send_messages"`
+}
+
+func (req ToggleGroupCallCanSendMessagesRequest) GetFunctionName() string {
+	return "toggleGroupCallCanSendMessages"
+}
+
+// Toggles whether participants of a group call can send messages there. Requires groupCall.can_toggle_can_send_messages right
+func (client *Client) ToggleGroupCallCanSendMessages(ctx context.Context, req *ToggleGroupCallCanSendMessagesRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type SendGroupCallMessageRequest struct {
+	request
+	// Group call identifier
+	GroupCallId int32 `json:"group_call_id"`
+	// Text of the message to send; 1-getOption("group_call_message_text_length_max") characters
+	Text *FormattedText `json:"text"`
+}
+
+func (req SendGroupCallMessageRequest) GetFunctionName() string {
+	return "sendGroupCallMessage"
+}
+
+// Sends a message to other participants of a group call. Requires groupCall.can_send_messages right
+func (client *Client) SendGroupCallMessage(ctx context.Context, req *SendGroupCallMessageRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type InviteGroupCallParticipantRequest struct {
+	request
+	// Group call identifier
+	GroupCallId int32 `json:"group_call_id"`
+	// User identifier
+	UserId int64 `json:"user_id"`
+	// Pass true if the group call is a video call
+	IsVideo bool `json:"is_video"`
+}
+
+func (req InviteGroupCallParticipantRequest) GetFunctionName() string {
+	return "inviteGroupCallParticipant"
+}
+
+// Invites a user to an active group call; for group calls not bound to a chat only. Sends a service message of the type messageGroupCall. The group call can have at most getOption("group_call_participant_count_max") participants
+func (client *Client) InviteGroupCallParticipant(ctx context.Context, req *InviteGroupCallParticipantRequest) (InviteGroupCallParticipantResult, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	switch result.MetaType {
+	case ConstructorInviteGroupCallParticipantResultUserPrivacyRestricted:
+		return UnmarshalInviteGroupCallParticipantResultUserPrivacyRestricted(result.Data)
+
+	case ConstructorInviteGroupCallParticipantResultUserAlreadyParticipant:
+		return UnmarshalInviteGroupCallParticipantResultUserAlreadyParticipant(result.Data)
+
+	case ConstructorInviteGroupCallParticipantResultUserWasBanned:
+		return UnmarshalInviteGroupCallParticipantResultUserWasBanned(result.Data)
+
+	case ConstructorInviteGroupCallParticipantResultSuccess:
+		return UnmarshalInviteGroupCallParticipantResultSuccess(result.Data)
+
+	default:
+		return nil, errors.New("invalid type")
+	}
+}
+
+type DeclineGroupCallInvitationRequest struct {
+	request
+	// Identifier of the chat with the message
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the message of the type messageGroupCall
+	MessageId int64 `json:"message_id"`
+}
+
+func (req DeclineGroupCallInvitationRequest) GetFunctionName() string {
+	return "declineGroupCallInvitation"
+}
+
+// Declines an invitation to an active group call via messageGroupCall. Can be called both by the sender and the receiver of the invitation
+func (client *Client) DeclineGroupCallInvitation(ctx context.Context, req *DeclineGroupCallInvitationRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type BanGroupCallParticipantsRequest struct {
+	request
+	// Group call identifier
+	GroupCallId int32 `json:"group_call_id"`
+	// Identifiers of group call participants to ban; identifiers of unknown users from the update updateGroupCallParticipants can be also passed to the method
+	UserIds []JsonInt64 `json:"user_ids"`
+}
+
+func (req BanGroupCallParticipantsRequest) GetFunctionName() string {
+	return "banGroupCallParticipants"
+}
+
+// Bans users from a group call not bound to a chat; requires groupCall.is_owned. Only the owner of the group call can invite the banned users back
+func (client *Client) BanGroupCallParticipants(ctx context.Context, req *BanGroupCallParticipantsRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type InviteVideoChatParticipantsRequest struct {
 	request
 	// Group call identifier
 	GroupCallId int32 `json:"group_call_id"`
@@ -13091,12 +14342,12 @@ type InviteGroupCallParticipantsRequest struct {
 	UserIds []int64 `json:"user_ids"`
 }
 
-func (req InviteGroupCallParticipantsRequest) GetFunctionName() string {
-	return "inviteGroupCallParticipants"
+func (req InviteVideoChatParticipantsRequest) GetFunctionName() string {
+	return "inviteVideoChatParticipants"
 }
 
-// Invites users to an active group call. Sends a service message of type messageInviteVideoChatParticipants for video chats
-func (client *Client) InviteGroupCallParticipants(ctx context.Context, req *InviteGroupCallParticipantsRequest) (*Ok, error) {
+// Invites users to an active video chat. Sends a service message of the type messageInviteVideoChatParticipants to the chat bound to the group call
+func (client *Client) InviteVideoChatParticipants(ctx context.Context, req *InviteVideoChatParticipantsRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -13109,20 +14360,20 @@ func (client *Client) InviteGroupCallParticipants(ctx context.Context, req *Invi
 	return UnmarshalOk(result.Data)
 }
 
-type GetGroupCallInviteLinkRequest struct {
+type GetVideoChatInviteLinkRequest struct {
 	request
 	// Group call identifier
 	GroupCallId int32 `json:"group_call_id"`
-	// Pass true if the invite link needs to contain an invite hash, passing which to joinGroupCall would allow the invited user to unmute themselves. Requires groupCall.can_be_managed group call flag
+	// Pass true if the invite link needs to contain an invite hash, passing which to joinVideoChat would allow the invited user to unmute themselves. Requires groupCall.can_be_managed right
 	CanSelfUnmute bool `json:"can_self_unmute"`
 }
 
-func (req GetGroupCallInviteLinkRequest) GetFunctionName() string {
-	return "getGroupCallInviteLink"
+func (req GetVideoChatInviteLinkRequest) GetFunctionName() string {
+	return "getVideoChatInviteLink"
 }
 
 // Returns invite link to a video chat in a public chat
-func (client *Client) GetGroupCallInviteLink(ctx context.Context, req *GetGroupCallInviteLinkRequest) (*HttpUrl, error) {
+func (client *Client) GetVideoChatInviteLink(ctx context.Context, req *GetVideoChatInviteLinkRequest) (*HttpUrl, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -13145,7 +14396,7 @@ func (req RevokeGroupCallInviteLinkRequest) GetFunctionName() string {
 	return "revokeGroupCallInviteLink"
 }
 
-// Revokes invite link for a group call. Requires groupCall.can_be_managed group call flag
+// Revokes invite link for a group call. Requires groupCall.can_be_managed right for video chats or groupCall.is_owned otherwise
 func (client *Client) RevokeGroupCallInviteLink(ctx context.Context, req *RevokeGroupCallInviteLinkRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -13175,7 +14426,7 @@ func (req StartGroupCallRecordingRequest) GetFunctionName() string {
 	return "startGroupCallRecording"
 }
 
-// Starts recording of an active group call. Requires groupCall.can_be_managed group call flag
+// Starts recording of an active group call; for video chats only. Requires groupCall.can_be_managed right
 func (client *Client) StartGroupCallRecording(ctx context.Context, req *StartGroupCallRecordingRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -13199,7 +14450,7 @@ func (req EndGroupCallRecordingRequest) GetFunctionName() string {
 	return "endGroupCallRecording"
 }
 
-// Ends recording of an active group call. Requires groupCall.can_be_managed group call flag
+// Ends recording of an active group call; for video chats only. Requires groupCall.can_be_managed right
 func (client *Client) EndGroupCallRecording(ctx context.Context, req *EndGroupCallRecordingRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -13279,8 +14530,8 @@ func (req SetGroupCallParticipantIsSpeakingRequest) GetFunctionName() string {
 	return "setGroupCallParticipantIsSpeaking"
 }
 
-// Informs TDLib that speaking state of a participant of an active group has changed
-func (client *Client) SetGroupCallParticipantIsSpeaking(ctx context.Context, req *SetGroupCallParticipantIsSpeakingRequest) (*Ok, error) {
+// Informs TDLib that speaking state of a participant of an active group call has changed. Returns identifier of the participant if it is found
+func (client *Client) SetGroupCallParticipantIsSpeaking(ctx context.Context, req *SetGroupCallParticipantIsSpeakingRequest) (MessageSender, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -13290,7 +14541,16 @@ func (client *Client) SetGroupCallParticipantIsSpeaking(ctx context.Context, req
 		return nil, buildResponseError(result.Data)
 	}
 
-	return UnmarshalOk(result.Data)
+	switch result.MetaType {
+	case ConstructorMessageSenderUser:
+		return UnmarshalMessageSenderUser(result.Data)
+
+	case ConstructorMessageSenderChat:
+		return UnmarshalMessageSenderChat(result.Data)
+
+	default:
+		return nil, errors.New("invalid type")
+	}
 }
 
 type ToggleGroupCallParticipantIsMutedRequest struct {
@@ -13335,7 +14595,7 @@ func (req SetGroupCallParticipantVolumeLevelRequest) GetFunctionName() string {
 	return "setGroupCallParticipantVolumeLevel"
 }
 
-// Changes volume level of a participant of an active group call. If the current user can manage the group call, then the participant's volume level will be changed for all users with the default volume level
+// Changes volume level of a participant of an active group call. If the current user can manage the group call or is the owner of the group call, then the participant's volume level will be changed for all users with the default volume level
 func (client *Client) SetGroupCallParticipantVolumeLevel(ctx context.Context, req *SetGroupCallParticipantVolumeLevelRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -13355,7 +14615,7 @@ type ToggleGroupCallParticipantIsHandRaisedRequest struct {
 	GroupCallId int32 `json:"group_call_id"`
 	// Participant identifier
 	ParticipantId MessageSender `json:"participant_id"`
-	// Pass true if the user's hand needs to be raised. Only self hand can be raised. Requires groupCall.can_be_managed group call flag to lower other's hand
+	// Pass true if the user's hand needs to be raised. Only self hand can be raised. Requires groupCall.can_be_managed right to lower other's hand
 	IsHandRaised bool `json:"is_hand_raised"`
 }
 
@@ -13363,7 +14623,7 @@ func (req ToggleGroupCallParticipantIsHandRaisedRequest) GetFunctionName() strin
 	return "toggleGroupCallParticipantIsHandRaised"
 }
 
-// Toggles whether a group call participant hand is rased
+// Toggles whether a group call participant hand is rased; for video chats only
 func (client *Client) ToggleGroupCallParticipantIsHandRaised(ctx context.Context, req *ToggleGroupCallParticipantIsHandRaisedRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -13375,6 +14635,32 @@ func (client *Client) ToggleGroupCallParticipantIsHandRaised(ctx context.Context
 	}
 
 	return UnmarshalOk(result.Data)
+}
+
+type GetGroupCallParticipantsRequest struct {
+	request
+	// The group call which participants will be returned
+	InputGroupCall InputGroupCall `json:"input_group_call"`
+	// The maximum number of participants to return; must be positive
+	Limit int32 `json:"limit"`
+}
+
+func (req GetGroupCallParticipantsRequest) GetFunctionName() string {
+	return "getGroupCallParticipants"
+}
+
+// Returns information about participants of a non-joined group call that is not bound to a chat
+func (client *Client) GetGroupCallParticipants(ctx context.Context, req *GetGroupCallParticipantsRequest) (*GroupCallParticipants, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalGroupCallParticipants(result.Data)
 }
 
 type LoadGroupCallParticipantsRequest struct {
@@ -13437,7 +14723,7 @@ func (req EndGroupCallRequest) GetFunctionName() string {
 	return "endGroupCall"
 }
 
-// Ends a group call. Requires groupCall.can_be_managed
+// Ends a group call. Requires groupCall.can_be_managed right for video chats or groupCall.is_owned otherwise
 func (client *Client) EndGroupCall(ctx context.Context, req *EndGroupCallRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -13451,18 +14737,18 @@ func (client *Client) EndGroupCall(ctx context.Context, req *EndGroupCallRequest
 	return UnmarshalOk(result.Data)
 }
 
-type GetGroupCallStreamsRequest struct {
+type GetVideoChatStreamsRequest struct {
 	request
 	// Group call identifier
 	GroupCallId int32 `json:"group_call_id"`
 }
 
-func (req GetGroupCallStreamsRequest) GetFunctionName() string {
-	return "getGroupCallStreams"
+func (req GetVideoChatStreamsRequest) GetFunctionName() string {
+	return "getVideoChatStreams"
 }
 
-// Returns information about available group call streams
-func (client *Client) GetGroupCallStreams(ctx context.Context, req *GetGroupCallStreamsRequest) (*GroupCallStreams, error) {
+// Returns information about available video chat streams
+func (client *Client) GetVideoChatStreams(ctx context.Context, req *GetVideoChatStreamsRequest) (*VideoChatStreams, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -13472,10 +14758,10 @@ func (client *Client) GetGroupCallStreams(ctx context.Context, req *GetGroupCall
 		return nil, buildResponseError(result.Data)
 	}
 
-	return UnmarshalGroupCallStreams(result.Data)
+	return UnmarshalVideoChatStreams(result.Data)
 }
 
-type GetGroupCallStreamSegmentRequest struct {
+type GetVideoChatStreamSegmentRequest struct {
 	request
 	// Group call identifier
 	GroupCallId int32 `json:"group_call_id"`
@@ -13489,12 +14775,12 @@ type GetGroupCallStreamSegmentRequest struct {
 	VideoQuality GroupCallVideoQuality `json:"video_quality"`
 }
 
-func (req GetGroupCallStreamSegmentRequest) GetFunctionName() string {
-	return "getGroupCallStreamSegment"
+func (req GetVideoChatStreamSegmentRequest) GetFunctionName() string {
+	return "getVideoChatStreamSegment"
 }
 
-// Returns a file with a segment of a group call stream in a modified OGG format for audio or MPEG-4 format for video
-func (client *Client) GetGroupCallStreamSegment(ctx context.Context, req *GetGroupCallStreamSegmentRequest) (*FilePart, error) {
+// Returns a file with a segment of a video chat stream in a modified OGG format for audio or MPEG-4 format for video
+func (client *Client) GetVideoChatStreamSegment(ctx context.Context, req *GetVideoChatStreamSegmentRequest) (*Data, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -13504,7 +14790,67 @@ func (client *Client) GetGroupCallStreamSegment(ctx context.Context, req *GetGro
 		return nil, buildResponseError(result.Data)
 	}
 
-	return UnmarshalFilePart(result.Data)
+	return UnmarshalData(result.Data)
+}
+
+type EncryptGroupCallDataRequest struct {
+	request
+	// Group call identifier. The call must not be a video chat
+	GroupCallId int32 `json:"group_call_id"`
+	// Data channel for which data is encrypted
+	DataChannel GroupCallDataChannel `json:"data_channel"`
+	// Data to encrypt
+	Data []byte `json:"data"`
+	// Size of data prefix that must be kept unencrypted
+	UnencryptedPrefixSize int32 `json:"unencrypted_prefix_size"`
+}
+
+func (req EncryptGroupCallDataRequest) GetFunctionName() string {
+	return "encryptGroupCallData"
+}
+
+// Encrypts group call data before sending them over network using tgcalls
+func (client *Client) EncryptGroupCallData(ctx context.Context, req *EncryptGroupCallDataRequest) (*Data, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalData(result.Data)
+}
+
+type DecryptGroupCallDataRequest struct {
+	request
+	// Group call identifier. The call must not be a video chat
+	GroupCallId int32 `json:"group_call_id"`
+	// Identifier of the group call participant, which sent the data
+	ParticipantId MessageSender `json:"participant_id"`
+	// Data channel for which data was encrypted; pass null if unknown
+	DataChannel GroupCallDataChannel `json:"data_channel"`
+	// Data to decrypt
+	Data []byte `json:"data"`
+}
+
+func (req DecryptGroupCallDataRequest) GetFunctionName() string {
+	return "decryptGroupCallData"
+}
+
+// Decrypts group call data received by tgcalls
+func (client *Client) DecryptGroupCallData(ctx context.Context, req *DecryptGroupCallDataRequest) (*Data, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalData(result.Data)
 }
 
 type SetMessageSenderBlockListRequest struct {
@@ -13593,8 +14939,10 @@ func (client *Client) GetBlockedMessageSenders(ctx context.Context, req *GetBloc
 
 type AddContactRequest struct {
 	request
-	// The contact to add or edit; phone number may be empty and needs to be specified only if known, vCard is ignored
-	Contact *Contact `json:"contact"`
+	// Identifier of the user
+	UserId int64 `json:"user_id"`
+	// The contact to add or edit; phone number may be empty and needs to be specified only if known
+	Contact *ImportedContact `json:"contact"`
 	// Pass true to share the current user's phone number with the new contact. A corresponding rule to userPrivacySettingShowPhoneNumber will be added if needed. Use the field userFullInfo.need_phone_number_privacy_exception to check whether the current user needs to be asked to share their phone number
 	SharePhoneNumber bool `json:"share_phone_number"`
 }
@@ -13619,8 +14967,8 @@ func (client *Client) AddContact(ctx context.Context, req *AddContactRequest) (*
 
 type ImportContactsRequest struct {
 	request
-	// The list of contacts to import or edit; contacts' vCard are ignored and are not imported
-	Contacts []*Contact `json:"contacts"`
+	// The list of contacts to import or edit
+	Contacts []*ImportedContact `json:"contacts"`
 }
 
 func (req ImportContactsRequest) GetFunctionName() string {
@@ -13739,8 +15087,8 @@ func (client *Client) GetImportedContactCount(ctx context.Context) (*Count, erro
 
 type ChangeImportedContactsRequest struct {
 	request
-	// The new list of contacts, contact's vCard are ignored and are not imported
-	Contacts []*Contact `json:"contacts"`
+	// The new list of contacts to import
+	Contacts []*ImportedContact `json:"contacts"`
 }
 
 func (req ChangeImportedContactsRequest) GetFunctionName() string {
@@ -13857,6 +15205,32 @@ func (client *Client) SetUserPersonalProfilePhoto(ctx context.Context, req *SetU
 	return UnmarshalOk(result.Data)
 }
 
+type SetUserNoteRequest struct {
+	request
+	// User identifier
+	UserId int64 `json:"user_id"`
+	// Note to set for the user; 0-getOption("user_note_text_length_max") characters. Only Bold, Italic, Underline, Strikethrough, Spoiler, and CustomEmoji entities are allowed
+	Note *FormattedText `json:"note"`
+}
+
+func (req SetUserNoteRequest) GetFunctionName() string {
+	return "setUserNote"
+}
+
+// Changes a note of a contact user
+func (client *Client) SetUserNote(ctx context.Context, req *SetUserNoteRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
 type SuggestUserProfilePhotoRequest struct {
 	request
 	// User identifier
@@ -13871,6 +15245,32 @@ func (req SuggestUserProfilePhotoRequest) GetFunctionName() string {
 
 // Suggests a profile photo to another regular user with common messages and allowing non-paid messages
 func (client *Client) SuggestUserProfilePhoto(ctx context.Context, req *SuggestUserProfilePhotoRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type SuggestUserBirthdateRequest struct {
+	request
+	// User identifier
+	UserId int64 `json:"user_id"`
+	// Birthdate to suggest
+	Birthdate *Birthdate `json:"birthdate"`
+}
+
+func (req SuggestUserBirthdateRequest) GetFunctionName() string {
+	return "suggestUserBirthdate"
+}
+
+// Suggests a birthdate to another regular user with common messages and allowing non-paid messages
+func (client *Client) SuggestUserBirthdate(ctx context.Context, req *SuggestUserBirthdateRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -14011,6 +15411,132 @@ func (client *Client) GetUserProfilePhotos(ctx context.Context, req *GetUserProf
 	}
 
 	return UnmarshalChatPhotos(result.Data)
+}
+
+type GetUserProfileAudiosRequest struct {
+	request
+	// User identifier
+	UserId int64 `json:"user_id"`
+	// The number of audio files to skip; must be non-negative
+	Offset int32 `json:"offset"`
+	// The maximum number of audio files to be returned; up to 100
+	Limit int32 `json:"limit"`
+}
+
+func (req GetUserProfileAudiosRequest) GetFunctionName() string {
+	return "getUserProfileAudios"
+}
+
+// Returns the list of profile audio files of a user
+func (client *Client) GetUserProfileAudios(ctx context.Context, req *GetUserProfileAudiosRequest) (*Audios, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalAudios(result.Data)
+}
+
+type IsProfileAudioRequest struct {
+	request
+	// Identifier of the audio file to check
+	FileId int32 `json:"file_id"`
+}
+
+func (req IsProfileAudioRequest) GetFunctionName() string {
+	return "isProfileAudio"
+}
+
+// Checks whether a file is in the profile audio files of the current user. Returns a 404 error if it isn't
+func (client *Client) IsProfileAudio(ctx context.Context, req *IsProfileAudioRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type AddProfileAudioRequest struct {
+	request
+	// Identifier of the audio file to be added. The file must have been uploaded to the server
+	FileId int32 `json:"file_id"`
+}
+
+func (req AddProfileAudioRequest) GetFunctionName() string {
+	return "addProfileAudio"
+}
+
+// Adds an audio file to the beginning of the profile audio files of the current user
+func (client *Client) AddProfileAudio(ctx context.Context, req *AddProfileAudioRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type SetProfileAudioPositionRequest struct {
+	request
+	// Identifier of the file from profile audio files, which position will be changed
+	FileId int32 `json:"file_id"`
+	// Identifier of the file from profile audio files after which the file will be positioned; pass 0 to move the file to the beginning of the list
+	AfterFileId int32 `json:"after_file_id"`
+}
+
+func (req SetProfileAudioPositionRequest) GetFunctionName() string {
+	return "setProfileAudioPosition"
+}
+
+// Changes position of an audio file in the profile audio files of the current user
+func (client *Client) SetProfileAudioPosition(ctx context.Context, req *SetProfileAudioPositionRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type RemoveProfileAudioRequest struct {
+	request
+	// Identifier of the audio file to be removed
+	FileId int32 `json:"file_id"`
+}
+
+func (req RemoveProfileAudioRequest) GetFunctionName() string {
+	return "removeProfileAudio"
+}
+
+// Removes an audio file from the profile audio files of the current user
+func (client *Client) RemoveProfileAudio(ctx context.Context, req *RemoveProfileAudioRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
 }
 
 type GetStickerOutlineRequest struct {
@@ -15127,7 +16653,7 @@ type SetProfilePhotoRequest struct {
 	request
 	// Profile photo to set
 	Photo InputChatPhoto `json:"photo"`
-	// Pass true to set the public photo, which will be visible even the main photo is hidden by privacy settings
+	// Pass true to set the public photo, which will be visible even if the main photo is hidden by privacy settings
 	IsPublic bool `json:"is_public"`
 }
 
@@ -15187,6 +16713,30 @@ func (req SetAccentColorRequest) GetFunctionName() string {
 
 // Changes accent color and background custom emoji for the current user; for Telegram Premium users only
 func (client *Client) SetAccentColor(ctx context.Context, req *SetAccentColorRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type SetUpgradedGiftColorsRequest struct {
+	request
+	// Identifier of the upgradedGiftColors scheme to use
+	UpgradedGiftColorsId JsonInt64 `json:"upgraded_gift_colors_id"`
+}
+
+func (req SetUpgradedGiftColorsRequest) GetFunctionName() string {
+	return "setUpgradedGiftColors"
+}
+
+// Changes color scheme for the current user based on an owned or a hosted upgraded gift; for Telegram Premium users only
+func (client *Client) SetUpgradedGiftColors(ctx context.Context, req *SetUpgradedGiftColorsRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -15361,6 +16911,30 @@ func (req SetBirthdateRequest) GetFunctionName() string {
 
 // Changes the birthdate of the current user
 func (client *Client) SetBirthdate(ctx context.Context, req *SetBirthdateRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type SetMainProfileTabRequest struct {
+	request
+	// The new value of the main profile tab
+	MainProfileTab ProfileTab `json:"main_profile_tab"`
+}
+
+func (req SetMainProfileTabRequest) GetFunctionName() string {
+	return "setMainProfileTab"
+}
+
+// Changes the main profile tab of the current user
+func (client *Client) SetMainProfileTab(ctx context.Context, req *SetMainProfileTabRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -16490,7 +18064,7 @@ func (req ToggleBotUsernameIsActiveRequest) GetFunctionName() string {
 	return "toggleBotUsernameIsActive"
 }
 
-// Changes active state for a username of a bot. The editable username can't be disabled. May return an error with a message "USERNAMES_ACTIVE_TOO_MUCH" if the maximum number of active usernames has been reached. Can be called only if userTypeBot.can_be_edited == true
+// Changes active state for a username of a bot. The editable username can be disabled only if there are other active usernames. May return an error with a message "USERNAMES_ACTIVE_TOO_MUCH" if the maximum number of active usernames has been reached. Can be called only if userTypeBot.can_be_edited == true
 func (client *Client) ToggleBotUsernameIsActive(ctx context.Context, req *ToggleBotUsernameIsActiveRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -17114,6 +18688,32 @@ func (client *Client) SetSupergroupUnrestrictBoostCount(ctx context.Context, req
 	return UnmarshalOk(result.Data)
 }
 
+type SetSupergroupMainProfileTabRequest struct {
+	request
+	// Identifier of the channel
+	SupergroupId int64 `json:"supergroup_id"`
+	// The new value of the main profile tab
+	MainProfileTab ProfileTab `json:"main_profile_tab"`
+}
+
+func (req SetSupergroupMainProfileTabRequest) GetFunctionName() string {
+	return "setSupergroupMainProfileTab"
+}
+
+// Changes the main profile tab of the channel; requires can_change_info administrator right
+func (client *Client) SetSupergroupMainProfileTab(ctx context.Context, req *SetSupergroupMainProfileTabRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
 type ToggleSupergroupSignMessagesRequest struct {
 	request
 	// Identifier of the channel
@@ -17170,7 +18770,7 @@ func (client *Client) ToggleSupergroupJoinToSendMessages(ctx context.Context, re
 
 type ToggleSupergroupJoinByRequestRequest struct {
 	request
-	// Identifier of the supergroup that isn't a broadcast group
+	// Identifier of the supergroup that isn't a broadcast group and isn't a channel direct message group
 	SupergroupId int64 `json:"supergroup_id"`
 	// New value of join_by_request
 	JoinByRequest bool `json:"join_by_request"`
@@ -17246,6 +18846,32 @@ func (client *Client) ToggleSupergroupCanHaveSponsoredMessages(ctx context.Conte
 	return UnmarshalOk(result.Data)
 }
 
+type ToggleSupergroupHasAutomaticTranslationRequest struct {
+	request
+	// The identifier of the channel
+	SupergroupId int64 `json:"supergroup_id"`
+	// The new value of has_automatic_translation
+	HasAutomaticTranslation bool `json:"has_automatic_translation"`
+}
+
+func (req ToggleSupergroupHasAutomaticTranslationRequest) GetFunctionName() string {
+	return "toggleSupergroupHasAutomaticTranslation"
+}
+
+// Toggles whether messages are automatically translated in the channel chat; requires can_change_info administrator right in the channel. The chat must have at least chatBoostFeatures.min_automatic_translation_boost_level boost level to enable automatic translation
+func (client *Client) ToggleSupergroupHasAutomaticTranslation(ctx context.Context, req *ToggleSupergroupHasAutomaticTranslationRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
 type ToggleSupergroupHasHiddenMembersRequest struct {
 	request
 	// Identifier of the supergroup
@@ -17304,6 +18930,8 @@ type ToggleSupergroupIsForumRequest struct {
 	SupergroupId int64 `json:"supergroup_id"`
 	// New value of is_forum
 	IsForum bool `json:"is_forum"`
+	// New value of has_forum_tabs; ignored if is_forum is false
+	HasForumTabs bool `json:"has_forum_tabs"`
 }
 
 func (req ToggleSupergroupIsForumRequest) GetFunctionName() string {
@@ -17727,7 +19355,7 @@ func (req GetAvailableGiftsRequest) GetFunctionName() string {
 }
 
 // Returns gifts that can be sent to other users and channel chats
-func (client *Client) GetAvailableGifts(ctx context.Context) (*Gifts, error) {
+func (client *Client) GetAvailableGifts(ctx context.Context) (*AvailableGifts, error) {
 	req := &GetAvailableGiftsRequest{}
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -17738,14 +19366,47 @@ func (client *Client) GetAvailableGifts(ctx context.Context) (*Gifts, error) {
 		return nil, buildResponseError(result.Data)
 	}
 
-	return UnmarshalGifts(result.Data)
+	return UnmarshalAvailableGifts(result.Data)
+}
+
+type CanSendGiftRequest struct {
+	request
+	// Identifier of the gift to send
+	GiftId JsonInt64 `json:"gift_id"`
+}
+
+func (req CanSendGiftRequest) GetFunctionName() string {
+	return "canSendGift"
+}
+
+// Checks whether a gift with next_send_date in the future can be sent already
+func (client *Client) CanSendGift(ctx context.Context, req *CanSendGiftRequest) (CanSendGiftResult, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	switch result.MetaType {
+	case ConstructorCanSendGiftResultOk:
+		return UnmarshalCanSendGiftResultOk(result.Data)
+
+	case ConstructorCanSendGiftResultFail:
+		return UnmarshalCanSendGiftResultFail(result.Data)
+
+	default:
+		return nil, errors.New("invalid type")
+	}
 }
 
 type SendGiftRequest struct {
 	request
 	// Identifier of the gift to send
 	GiftId JsonInt64 `json:"gift_id"`
-	// Identifier of the user or the channel chat that will receive the gift
+	// Identifier of the user or the channel chat that will receive the gift; limited gifts can't be sent to channel chats
 	OwnerId MessageSender `json:"owner_id"`
 	// Text to show along with the gift; 0-getOption("gift_text_length_max") characters. Only Bold, Italic, Underline, Strikethrough, Spoiler, and CustomEmoji entities are allowed. Must be empty if the receiver enabled paid messages
 	Text *FormattedText `json:"text"`
@@ -17785,7 +19446,7 @@ func (req SellGiftRequest) GetFunctionName() string {
 	return "sellGift"
 }
 
-// Sells a gift for Telegram Stars
+// Sells a gift for Telegram Stars; requires owner privileges for gifts owned by a chat
 func (client *Client) SellGift(ctx context.Context, req *SellGiftRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -17931,6 +19592,34 @@ func (client *Client) UpgradeGift(ctx context.Context, req *UpgradeGiftRequest) 
 	return UnmarshalUpgradeGiftResult(result.Data)
 }
 
+type BuyGiftUpgradeRequest struct {
+	request
+	// Identifier of the user or the channel chat that owns the gift
+	OwnerId MessageSender `json:"owner_id"`
+	// Prepaid upgrade hash as received along with the gift
+	PrepaidUpgradeHash string `json:"prepaid_upgrade_hash"`
+	// The amount of Telegram Stars the user agreed to pay for the upgrade; must be equal to gift.upgrade_star_count
+	StarCount int64 `json:"star_count"`
+}
+
+func (req BuyGiftUpgradeRequest) GetFunctionName() string {
+	return "buyGiftUpgrade"
+}
+
+// Pays for upgrade of a regular gift that is owned by another user or channel chat
+func (client *Client) BuyGiftUpgrade(ctx context.Context, req *BuyGiftUpgradeRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
 type TransferGiftRequest struct {
 	request
 	// Unique identifier of business connection on behalf of which to send the request; for bots only
@@ -17947,7 +19636,7 @@ func (req TransferGiftRequest) GetFunctionName() string {
 	return "transferGift"
 }
 
-// Sends an upgraded gift to another user or a channel chat
+// Sends an upgraded gift to another user or channel chat
 func (client *Client) TransferGift(ctx context.Context, req *TransferGiftRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -17961,22 +19650,93 @@ func (client *Client) TransferGift(ctx context.Context, req *TransferGiftRequest
 	return UnmarshalOk(result.Data)
 }
 
+type DropGiftOriginalDetailsRequest struct {
+	request
+	// Identifier of the gift
+	ReceivedGiftId string `json:"received_gift_id"`
+	// The amount of Telegram Stars required to pay for the operation
+	StarCount int64 `json:"star_count"`
+}
+
+func (req DropGiftOriginalDetailsRequest) GetFunctionName() string {
+	return "dropGiftOriginalDetails"
+}
+
+// Drops original details for an upgraded gift
+func (client *Client) DropGiftOriginalDetails(ctx context.Context, req *DropGiftOriginalDetailsRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type SendResoldGiftRequest struct {
+	request
+	// Name of the upgraded gift to send
+	GiftName string `json:"gift_name"`
+	// Identifier of the user or the channel chat that will receive the gift
+	OwnerId MessageSender `json:"owner_id"`
+	// The price that the user agreed to pay for the gift
+	Price GiftResalePrice `json:"price"`
+}
+
+func (req SendResoldGiftRequest) GetFunctionName() string {
+	return "sendResoldGift"
+}
+
+// Sends an upgraded gift that is available for resale to another user or channel chat; gifts already owned by the current user must be transferred using transferGift and can't be passed to the method
+func (client *Client) SendResoldGift(ctx context.Context, req *SendResoldGiftRequest) (GiftResaleResult, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	switch result.MetaType {
+	case ConstructorGiftResaleResultOk:
+		return UnmarshalGiftResaleResultOk(result.Data)
+
+	case ConstructorGiftResaleResultPriceIncreased:
+		return UnmarshalGiftResaleResultPriceIncreased(result.Data)
+
+	default:
+		return nil, errors.New("invalid type")
+	}
+}
+
 type GetReceivedGiftsRequest struct {
 	request
 	// Unique identifier of business connection on behalf of which to send the request; for bots only
 	BusinessConnectionId string `json:"business_connection_id"`
 	// Identifier of the gift receiver
 	OwnerId MessageSender `json:"owner_id"`
+	// Pass collection identifier to get gifts only from the specified collection; pass 0 to get gifts regardless of collections
+	CollectionId int32 `json:"collection_id"`
 	// Pass true to exclude gifts that aren't saved to the chat's profile page. Always true for gifts received by other users and channel chats without can_post_messages administrator right
 	ExcludeUnsaved bool `json:"exclude_unsaved"`
 	// Pass true to exclude gifts that are saved to the chat's profile page. Always false for gifts received by other users and channel chats without can_post_messages administrator right
 	ExcludeSaved bool `json:"exclude_saved"`
 	// Pass true to exclude gifts that can be purchased unlimited number of times
 	ExcludeUnlimited bool `json:"exclude_unlimited"`
-	// Pass true to exclude gifts that can be purchased limited number of times
-	ExcludeLimited bool `json:"exclude_limited"`
+	// Pass true to exclude gifts that can be purchased limited number of times and can be upgraded
+	ExcludeUpgradable bool `json:"exclude_upgradable"`
+	// Pass true to exclude gifts that can be purchased limited number of times and can't be upgraded
+	ExcludeNonUpgradable bool `json:"exclude_non_upgradable"`
 	// Pass true to exclude upgraded gifts
 	ExcludeUpgraded bool `json:"exclude_upgraded"`
+	// Pass true to exclude gifts that can't be used in setUpgradedGiftColors
+	ExcludeWithoutColors bool `json:"exclude_without_colors"`
+	// Pass true to exclude gifts that are just hosted and are not owned by the owner
+	ExcludeHosted bool `json:"exclude_hosted"`
 	// Pass true to sort results by gift price instead of send date
 	SortByPrice bool `json:"sort_by_price"`
 	// Offset of the first entry to return as received from the previous request; use empty string to get the first chunk of results
@@ -18051,6 +19811,30 @@ func (client *Client) GetUpgradedGift(ctx context.Context, req *GetUpgradedGiftR
 	return UnmarshalUpgradedGift(result.Data)
 }
 
+type GetUpgradedGiftValueInfoRequest struct {
+	request
+	// Unique name of the upgraded gift
+	Name string `json:"name"`
+}
+
+func (req GetUpgradedGiftValueInfoRequest) GetFunctionName() string {
+	return "getUpgradedGiftValueInfo"
+}
+
+// Returns information about value of an upgraded gift by its name
+func (client *Client) GetUpgradedGiftValueInfo(ctx context.Context, req *GetUpgradedGiftValueInfoRequest) (*UpgradedGiftValueInfo, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalUpgradedGiftValueInfo(result.Data)
+}
+
 type GetUpgradedGiftWithdrawalUrlRequest struct {
 	request
 	// Identifier of the gift
@@ -18075,6 +19859,280 @@ func (client *Client) GetUpgradedGiftWithdrawalUrl(ctx context.Context, req *Get
 	}
 
 	return UnmarshalHttpUrl(result.Data)
+}
+
+type SetGiftResalePriceRequest struct {
+	request
+	// Identifier of the unique gift
+	ReceivedGiftId string `json:"received_gift_id"`
+	// The new price for the unique gift; pass null to disallow gift resale. The current user will receive getOption("gift_resale_star_earnings_per_mille") Telegram Stars for each 1000 Telegram Stars paid for the gift if the gift price is in Telegram Stars or getOption("gift_resale_ton_earnings_per_mille") Toncoins for each 1000 Toncoins paid for the gift if the gift price is in Toncoins
+	Price GiftResalePrice `json:"price"`
+}
+
+func (req SetGiftResalePriceRequest) GetFunctionName() string {
+	return "setGiftResalePrice"
+}
+
+// Changes resale price of a unique gift owned by the current user
+func (client *Client) SetGiftResalePrice(ctx context.Context, req *SetGiftResalePriceRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type SearchGiftsForResaleRequest struct {
+	request
+	// Identifier of the regular gift that was upgraded to a unique gift
+	GiftId JsonInt64 `json:"gift_id"`
+	// Order in which the results will be sorted
+	Order GiftForResaleOrder `json:"order"`
+	// Attributes used to filter received gifts. If multiple attributes of the same type are specified, then all of them are allowed. If none attributes of specific type are specified, then all values for this attribute type are allowed
+	Attributes []UpgradedGiftAttributeId `json:"attributes"`
+	// Offset of the first entry to return as received from the previous request with the same order and attributes; use empty string to get the first chunk of results
+	Offset string `json:"offset"`
+	// The maximum number of gifts to return
+	Limit int32 `json:"limit"`
+}
+
+func (req SearchGiftsForResaleRequest) GetFunctionName() string {
+	return "searchGiftsForResale"
+}
+
+// Returns upgraded gifts that can be bought from other owners using sendResoldGift
+func (client *Client) SearchGiftsForResale(ctx context.Context, req *SearchGiftsForResaleRequest) (*GiftsForResale, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalGiftsForResale(result.Data)
+}
+
+type GetGiftCollectionsRequest struct {
+	request
+	// Identifier of the user or the channel chat that received the gifts
+	OwnerId MessageSender `json:"owner_id"`
+}
+
+func (req GetGiftCollectionsRequest) GetFunctionName() string {
+	return "getGiftCollections"
+}
+
+// Returns collections of gifts owned by the given user or chat
+func (client *Client) GetGiftCollections(ctx context.Context, req *GetGiftCollectionsRequest) (*GiftCollections, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalGiftCollections(result.Data)
+}
+
+type CreateGiftCollectionRequest struct {
+	request
+	// Identifier of the user or the channel chat that received the gifts
+	OwnerId MessageSender `json:"owner_id"`
+	// Name of the collection; 1-12 characters
+	Name string `json:"name"`
+	// Identifier of the gifts to add to the collection; 0-getOption("gift_collection_gift_count_max") identifiers
+	ReceivedGiftIds []string `json:"received_gift_ids"`
+}
+
+func (req CreateGiftCollectionRequest) GetFunctionName() string {
+	return "createGiftCollection"
+}
+
+// Creates a collection from gifts on the current user's or a channel's profile page; requires can_post_messages administrator right in the channel chat. An owner can have up to getOption("gift_collection_count_max") gift collections. The new collection will be added to the end of the gift collection list of the owner. Returns the created collection
+func (client *Client) CreateGiftCollection(ctx context.Context, req *CreateGiftCollectionRequest) (*GiftCollection, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalGiftCollection(result.Data)
+}
+
+type ReorderGiftCollectionsRequest struct {
+	request
+	// Identifier of the user or the channel chat that owns the collection
+	OwnerId MessageSender `json:"owner_id"`
+	// New order of gift collections
+	CollectionIds []int32 `json:"collection_ids"`
+}
+
+func (req ReorderGiftCollectionsRequest) GetFunctionName() string {
+	return "reorderGiftCollections"
+}
+
+// Changes order of gift collections. If the collections are owned by a channel chat, then requires can_post_messages administrator right in the channel chat
+func (client *Client) ReorderGiftCollections(ctx context.Context, req *ReorderGiftCollectionsRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type DeleteGiftCollectionRequest struct {
+	request
+	// Identifier of the user or the channel chat that owns the collection
+	OwnerId MessageSender `json:"owner_id"`
+	// Identifier of the gift collection
+	CollectionId int32 `json:"collection_id"`
+}
+
+func (req DeleteGiftCollectionRequest) GetFunctionName() string {
+	return "deleteGiftCollection"
+}
+
+// Deletes a gift collection. If the collection is owned by a channel chat, then requires can_post_messages administrator right in the channel chat
+func (client *Client) DeleteGiftCollection(ctx context.Context, req *DeleteGiftCollectionRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type SetGiftCollectionNameRequest struct {
+	request
+	// Identifier of the user or the channel chat that owns the collection
+	OwnerId MessageSender `json:"owner_id"`
+	// Identifier of the gift collection
+	CollectionId int32 `json:"collection_id"`
+	// New name of the collection; 1-12 characters
+	Name string `json:"name"`
+}
+
+func (req SetGiftCollectionNameRequest) GetFunctionName() string {
+	return "setGiftCollectionName"
+}
+
+// Changes name of a gift collection. If the collection is owned by a channel chat, then requires can_post_messages administrator right in the channel chat. Returns the changed collection
+func (client *Client) SetGiftCollectionName(ctx context.Context, req *SetGiftCollectionNameRequest) (*GiftCollection, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalGiftCollection(result.Data)
+}
+
+type AddGiftCollectionGiftsRequest struct {
+	request
+	// Identifier of the user or the channel chat that owns the collection
+	OwnerId MessageSender `json:"owner_id"`
+	// Identifier of the gift collection
+	CollectionId int32 `json:"collection_id"`
+	// Identifier of the gifts to add to the collection; 1-getOption("gift_collection_gift_count_max") identifiers. If after addition the collection has more than getOption("gift_collection_gift_count_max") gifts, then the last one are removed from the collection
+	ReceivedGiftIds []string `json:"received_gift_ids"`
+}
+
+func (req AddGiftCollectionGiftsRequest) GetFunctionName() string {
+	return "addGiftCollectionGifts"
+}
+
+// Adds gifts to the beginning of a previously created collection. If the collection is owned by a channel chat, then requires can_post_messages administrator right in the channel chat. Returns the changed collection
+func (client *Client) AddGiftCollectionGifts(ctx context.Context, req *AddGiftCollectionGiftsRequest) (*GiftCollection, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalGiftCollection(result.Data)
+}
+
+type RemoveGiftCollectionGiftsRequest struct {
+	request
+	// Identifier of the user or the channel chat that owns the collection
+	OwnerId MessageSender `json:"owner_id"`
+	// Identifier of the gift collection
+	CollectionId int32 `json:"collection_id"`
+	// Identifier of the gifts to remove from the collection
+	ReceivedGiftIds []string `json:"received_gift_ids"`
+}
+
+func (req RemoveGiftCollectionGiftsRequest) GetFunctionName() string {
+	return "removeGiftCollectionGifts"
+}
+
+// Removes gifts from a collection. If the collection is owned by a channel chat, then requires can_post_messages administrator right in the channel chat. Returns the changed collection
+func (client *Client) RemoveGiftCollectionGifts(ctx context.Context, req *RemoveGiftCollectionGiftsRequest) (*GiftCollection, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalGiftCollection(result.Data)
+}
+
+type ReorderGiftCollectionGiftsRequest struct {
+	request
+	// Identifier of the user or the channel chat that owns the collection
+	OwnerId MessageSender `json:"owner_id"`
+	// Identifier of the gift collection
+	CollectionId int32 `json:"collection_id"`
+	// Identifier of the gifts to move to the beginning of the collection. All other gifts are placed in the current order after the specified gifts
+	ReceivedGiftIds []string `json:"received_gift_ids"`
+}
+
+func (req ReorderGiftCollectionGiftsRequest) GetFunctionName() string {
+	return "reorderGiftCollectionGifts"
+}
+
+// Changes order of gifts in a collection. If the collection is owned by a channel chat, then requires can_post_messages administrator right in the channel chat. Returns the changed collection
+func (client *Client) ReorderGiftCollectionGifts(ctx context.Context, req *ReorderGiftCollectionGiftsRequest) (*GiftCollection, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalGiftCollection(result.Data)
 }
 
 type CreateInvoiceLinkRequest struct {
@@ -19286,9 +21344,9 @@ type GetChatRevenueTransactionsRequest struct {
 	request
 	// Chat identifier
 	ChatId int64 `json:"chat_id"`
-	// Number of transactions to skip
-	Offset int32 `json:"offset"`
-	// The maximum number of transactions to be returned; up to 200
+	// Offset of the first transaction to return as received from the previous request; use empty string to get the first chunk of results
+	Offset string `json:"offset"`
+	// The maximum number of transactions to be returned; up to 100
 	Limit int32 `json:"limit"`
 }
 
@@ -19308,6 +21366,34 @@ func (client *Client) GetChatRevenueTransactions(ctx context.Context, req *GetCh
 	}
 
 	return UnmarshalChatRevenueTransactions(result.Data)
+}
+
+type GetTonTransactionsRequest struct {
+	request
+	// Direction of the transactions to receive; pass null to get all transactions
+	Direction TransactionDirection `json:"direction"`
+	// Offset of the first transaction to return as received from the previous request; use empty string to get the first chunk of results
+	Offset string `json:"offset"`
+	// The maximum number of transactions to return
+	Limit int32 `json:"limit"`
+}
+
+func (req GetTonTransactionsRequest) GetFunctionName() string {
+	return "getTonTransactions"
+}
+
+// Returns the list of Toncoin transactions of the current user
+func (client *Client) GetTonTransactions(ctx context.Context, req *GetTonTransactionsRequest) (*TonTransactions, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalTonTransactions(result.Data)
 }
 
 type GetStarRevenueStatisticsRequest struct {
@@ -19340,7 +21426,7 @@ type GetStarWithdrawalUrlRequest struct {
 	request
 	// Identifier of the owner of the Telegram Stars; can be identifier of the current user, an owned bot, or an owned supergroup or channel chat
 	OwnerId MessageSender `json:"owner_id"`
-	// The number of Telegram Stars to withdraw. Must be at least getOption("star_withdrawal_count_min")
+	// The number of Telegram Stars to withdraw; must be between getOption("star_withdrawal_count_min") and getOption("star_withdrawal_count_max")
 	StarCount int64 `json:"star_count"`
 	// The 2-step verification password of the current user
 	Password string `json:"password"`
@@ -19376,6 +21462,54 @@ func (req GetStarAdAccountUrlRequest) GetFunctionName() string {
 
 // Returns a URL for a Telegram Ad platform account that can be used to set up advertisements for the chat paid in the owned Telegram Stars
 func (client *Client) GetStarAdAccountUrl(ctx context.Context, req *GetStarAdAccountUrlRequest) (*HttpUrl, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalHttpUrl(result.Data)
+}
+
+type GetTonRevenueStatisticsRequest struct {
+	request
+	// Pass true if a dark theme is used by the application
+	IsDark bool `json:"is_dark"`
+}
+
+func (req GetTonRevenueStatisticsRequest) GetFunctionName() string {
+	return "getTonRevenueStatistics"
+}
+
+// Returns detailed Toncoin revenue statistics of the current user
+func (client *Client) GetTonRevenueStatistics(ctx context.Context, req *GetTonRevenueStatisticsRequest) (*TonRevenueStatistics, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalTonRevenueStatistics(result.Data)
+}
+
+type GetTonWithdrawalUrlRequest struct {
+	request
+	// The 2-step verification password of the current user
+	Password string `json:"password"`
+}
+
+func (req GetTonWithdrawalUrlRequest) GetFunctionName() string {
+	return "getTonWithdrawalUrl"
+}
+
+// Returns a URL for Toncoin withdrawal from the current user's account. The user must have at least 10 toncoins to withdraw and can withdraw up to 100000 Toncoins in one transaction
+func (client *Client) GetTonWithdrawalUrl(ctx context.Context, req *GetTonWithdrawalUrlRequest) (*HttpUrl, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -21220,7 +23354,7 @@ type GetStarTransactionsRequest struct {
 	// If non-empty, only transactions related to the Star Subscription will be returned
 	SubscriptionId string `json:"subscription_id"`
 	// Direction of the transactions to receive; pass null to get all transactions
-	Direction StarTransactionDirection `json:"direction"`
+	Direction TransactionDirection `json:"direction"`
 	// Offset of the first transaction to return as received from the previous request; use empty string to get the first chunk of results
 	Offset string `json:"offset"`
 	// The maximum number of transactions to return
@@ -22851,6 +24985,9 @@ func (client *Client) TestUseUpdate(ctx context.Context) (Update, error) {
 	case ConstructorUpdateMessageFactCheck:
 		return UnmarshalUpdateMessageFactCheck(result.Data)
 
+	case ConstructorUpdateMessageSuggestedPostInfo:
+		return UnmarshalUpdateMessageSuggestedPostInfo(result.Data)
+
 	case ConstructorUpdateMessageLiveLocationViewed:
 		return UnmarshalUpdateMessageLiveLocationViewed(result.Data)
 
@@ -22968,6 +25105,12 @@ func (client *Client) TestUseUpdate(ctx context.Context) (Update, error) {
 	case ConstructorUpdateSavedMessagesTopicCount:
 		return UnmarshalUpdateSavedMessagesTopicCount(result.Data)
 
+	case ConstructorUpdateDirectMessagesChatTopic:
+		return UnmarshalUpdateDirectMessagesChatTopic(result.Data)
+
+	case ConstructorUpdateTopicMessageCount:
+		return UnmarshalUpdateTopicMessageCount(result.Data)
+
 	case ConstructorUpdateQuickReplyShortcut:
 		return UnmarshalUpdateQuickReplyShortcut(result.Data)
 
@@ -23009,6 +25152,9 @@ func (client *Client) TestUseUpdate(ctx context.Context) (Update, error) {
 
 	case ConstructorUpdateChatAction:
 		return UnmarshalUpdateChatAction(result.Data)
+
+	case ConstructorUpdatePendingTextMessage:
+		return UnmarshalUpdatePendingTextMessage(result.Data)
 
 	case ConstructorUpdateUserStatus:
 		return UnmarshalUpdateUserStatus(result.Data)
@@ -23073,6 +25219,15 @@ func (client *Client) TestUseUpdate(ctx context.Context) (Update, error) {
 	case ConstructorUpdateGroupCallParticipant:
 		return UnmarshalUpdateGroupCallParticipant(result.Data)
 
+	case ConstructorUpdateGroupCallParticipants:
+		return UnmarshalUpdateGroupCallParticipants(result.Data)
+
+	case ConstructorUpdateGroupCallVerificationState:
+		return UnmarshalUpdateGroupCallVerificationState(result.Data)
+
+	case ConstructorUpdateGroupCallNewMessage:
+		return UnmarshalUpdateGroupCallNewMessage(result.Data)
+
 	case ConstructorUpdateNewCallSignalingData:
 		return UnmarshalUpdateNewCallSignalingData(result.Data)
 
@@ -23091,11 +25246,11 @@ func (client *Client) TestUseUpdate(ctx context.Context) (Update, error) {
 	case ConstructorUpdateStoryDeleted:
 		return UnmarshalUpdateStoryDeleted(result.Data)
 
-	case ConstructorUpdateStorySendSucceeded:
-		return UnmarshalUpdateStorySendSucceeded(result.Data)
+	case ConstructorUpdateStoryPostSucceeded:
+		return UnmarshalUpdateStoryPostSucceeded(result.Data)
 
-	case ConstructorUpdateStorySendFailed:
-		return UnmarshalUpdateStorySendFailed(result.Data)
+	case ConstructorUpdateStoryPostFailed:
+		return UnmarshalUpdateStoryPostFailed(result.Data)
 
 	case ConstructorUpdateChatActiveStories:
 		return UnmarshalUpdateChatActiveStories(result.Data)
@@ -23133,8 +25288,8 @@ func (client *Client) TestUseUpdate(ctx context.Context) (Update, error) {
 	case ConstructorUpdateDefaultBackground:
 		return UnmarshalUpdateDefaultBackground(result.Data)
 
-	case ConstructorUpdateChatThemes:
-		return UnmarshalUpdateChatThemes(result.Data)
+	case ConstructorUpdateEmojiChatThemes:
+		return UnmarshalUpdateEmojiChatThemes(result.Data)
 
 	case ConstructorUpdateAccentColors:
 		return UnmarshalUpdateAccentColors(result.Data)
@@ -23150,6 +25305,9 @@ func (client *Client) TestUseUpdate(ctx context.Context) (Update, error) {
 
 	case ConstructorUpdateFreezeState:
 		return UnmarshalUpdateFreezeState(result.Data)
+
+	case ConstructorUpdateAgeVerificationParameters:
+		return UnmarshalUpdateAgeVerificationParameters(result.Data)
 
 	case ConstructorUpdateTermsOfService:
 		return UnmarshalUpdateTermsOfService(result.Data)
@@ -23184,11 +25342,17 @@ func (client *Client) TestUseUpdate(ctx context.Context) (Update, error) {
 	case ConstructorUpdateOwnedStarCount:
 		return UnmarshalUpdateOwnedStarCount(result.Data)
 
+	case ConstructorUpdateOwnedTonCount:
+		return UnmarshalUpdateOwnedTonCount(result.Data)
+
 	case ConstructorUpdateChatRevenueAmount:
 		return UnmarshalUpdateChatRevenueAmount(result.Data)
 
 	case ConstructorUpdateStarRevenueStatus:
 		return UnmarshalUpdateStarRevenueStatus(result.Data)
+
+	case ConstructorUpdateTonRevenueStatus:
+		return UnmarshalUpdateTonRevenueStatus(result.Data)
 
 	case ConstructorUpdateSpeechRecognitionTrial:
 		return UnmarshalUpdateSpeechRecognitionTrial(result.Data)

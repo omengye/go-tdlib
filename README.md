@@ -1,7 +1,7 @@
 # go-tdlib
 
 Go wrapper for [TDLib (Telegram Database Library)](https://github.com/tdlib/td) with full support of the TDLib.
-Current supported version of TDLib corresponds to the commit hash [971684a](https://github.com/tdlib/td/commit/971684a3dcc7bdf99eec024e1c4f57ae729d6d53), updated on 2025-04-30
+Current supported version of TDLib corresponds to the commit hash [dd1b761](https://github.com/tdlib/td/commit/dd1b761fda7e47f4e0275c4d319f80a04db1997f), updated on 2025-04-30
 
 ## TDLib installation
 
@@ -45,7 +45,7 @@ package main
 
 import (
 	"context"
-	"github.com/zelenin/go-tdlib/client"
+	"github.com/omengye/go-tdlib/client"
 	"log"
 	"os"
 	"os/signal"
@@ -140,7 +140,7 @@ import (
 	"log"
 	"path/filepath"
 
-	"github.com/zelenin/go-tdlib/client"
+	"github.com/omengye/go-tdlib/client"
 )
 
 const (
@@ -209,7 +209,7 @@ tdlibClient, err := client.NewClient(authorizer, proxy)
 
 ## Example
 
-[Example application](https://github.com/zelenin/go-tdlib/tree/master/example)
+[Example application](https://github.com/omengye/go-tdlib/tree/master/example)
 
 ```
 cd example
@@ -221,8 +221,8 @@ docker run --rm -it -e "API_ID=00000" -e "API_HASH=abcdef0123456789" tdlib-test 
 ## Notes
 
 * WIP. Library API can be changed in the future
-* The package includes a .tl-parser and generated [json-schema](https://github.com/zelenin/go-tdlib/tree/master/data) for creating libraries in other languages
+* The package includes a .tl-parser and generated [json-schema](https://github.com/omengye/go-tdlib/tree/master/data) for creating libraries in other languages
 
 ## Author
 
-[Aleksandr Zelenin](https://github.com/zelenin/), e-mail: [aleksandr@zelenin.me](mailto:aleksandr@zelenin.me)
+[Aleksandr Zelenin](https://github.com/omengye/), e-mail: [aleksandr@zelenin.me](mailto:aleksandr@zelenin.me)
