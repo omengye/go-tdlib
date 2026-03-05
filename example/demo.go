@@ -55,10 +55,12 @@ func main() {
 	}
 
 	proxy := client.WithProxy(&client.AddProxyRequest{
-		Server: "127.0.0.1",
-		Port:   11034,
+		Proxy: &client.Proxy{
+			Server: "127.0.0.1",
+			Port:   11034,
+			Type:   &client.ProxyTypeSocks5{},
+		},
 		Enable: true,
-		Type:   &client.ProxyTypeSocks5{},
 	})
 
 	// ----------------------- handle chat message -----------------------
