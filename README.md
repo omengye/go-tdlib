@@ -1,7 +1,7 @@
 # go-tdlib
 
 Go wrapper for [TDLib (Telegram Database Library)](https://github.com/tdlib/td) with full support of the TDLib.
-Current supported version of TDLib corresponds to the commit hash [af0cb1d](https://github.com/tdlib/td/commit/af0cb1d30a1e5cb1a10cd83b48998ca9ea9ce249), updated on 2026-03-03
+Current supported version of TDLib corresponds to the commit hash [e0943d0](https://github.com/tdlib/td/commit/e0943d068ce90b5010f1aea946e6901e25b43bf6), updated on 2026-05-18
 
 ## TDLib installation
 
@@ -30,7 +30,7 @@ CGO_LDFLAGS=-LC:/path/to/tdlib/build/tdlib/bin -ltdjson
 Example for PowerShell:
 
 ```powershell
-$env:CGO_ENABLED=1; $env:CGO_CFLAGS="-IC:/td/tdlib/include"; $env:CGO_LDFLAGS="-LC:/td/tdlib/bin -ltdjson"; go build -trimpath -ldflags="-s -w" -o demo.exe .\cmd\demo.go
+$env:CGO_ENABLED=1; $env:CGO_CFLAGS="-IC:/td/tdlib/include"; $env:CGO_LDFLAGS="-LC:/td/tdlib/bin -ltdjson"; go build -trimpath -ldflags="-s -w" -o demo.exe .\example\demo.go
 ```
 To run, put the .dll from C:/td/tdlib/bin to the directory with the compiled .exe.
 

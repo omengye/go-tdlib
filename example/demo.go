@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -17,11 +18,11 @@ var (
 )
 
 func main() {
+	fmt.Println("CGO 依赖加载成功，Go 正常启动！")
 	var (
 		apiIdRaw = os.Getenv("API_ID")
 		apiHash  = os.Getenv("API_HASH")
 	)
-
 	apiId64, err := strconv.ParseInt(apiIdRaw, 10, 32)
 	if err != nil {
 		log.Fatalf("strconv.Atoi error: %s", err)
@@ -57,7 +58,7 @@ func main() {
 	proxy := client.WithProxy(&client.AddProxyRequest{
 		Proxy: &client.Proxy{
 			Server: "127.0.0.1",
-			Port:   11034,
+			Port:   11808,
 			Type:   &client.ProxyTypeSocks5{},
 		},
 		Enable: true,

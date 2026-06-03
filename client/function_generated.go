@@ -149,6 +149,8 @@ func (client *Client) SetAuthenticationPhoneNumber(ctx context.Context, req *Set
 
 type CheckAuthenticationPremiumPurchaseRequest struct {
 	request
+	// The number of days for which the Telegram Premium subscription will be granted
+	PremiumDayCount int32 `json:"premium_day_count"`
 	// ISO 4217 currency code of the payment currency
 	Currency string `json:"currency"`
 	// Paid amount, in the smallest units of the currency
@@ -179,6 +181,8 @@ type SetAuthenticationPremiumPurchaseTransactionRequest struct {
 	Transaction StoreTransaction `json:"transaction"`
 	// Pass true if this is a restore of a Telegram Premium purchase; only for App Store
 	IsRestore bool `json:"is_restore"`
+	// The number of days for which the Telegram Premium subscription will be granted
+	PremiumDayCount int32 `json:"premium_day_count"`
 	// ISO 4217 currency code of the payment currency
 	Currency string `json:"currency"`
 	// Paid amount, in the smallest units of the currency
@@ -1470,7 +1474,7 @@ func (req GetRepliedMessageRequest) GetFunctionName() string {
 	return "getRepliedMessage"
 }
 
-// Returns information about a non-bundled message that is replied by a given message. Also, returns the pinned message for messagePinMessage, the game message for messageGameScore, the invoice message for messagePaymentSuccessful, the message with a previously set same background for messageChatSetBackground, the giveaway message for messageGiveawayCompleted, the checklist message for messageChecklistTasksDone, messageChecklistTasksAdded, the message with suggested post information for messageSuggestedPostApprovalFailed, messageSuggestedPostApproved, messageSuggestedPostDeclined, messageSuggestedPostPaid, messageSuggestedPostRefunded, the message with the regular gift that was upgraded for messageUpgradedGift with origin of the type upgradedGiftOriginUpgrade, the message with gift purchase offer for messageUpgradedGiftPurchaseOfferRejected, the message with the request to disable content protection for messageChatHasProtectedContentToggled, and the topic creation message for topic messages without non-bundled replied message. Returns a 404 error if the message doesn't exist
+// Returns information about a non-bundled message that is replied by a given message. Also, returns the pinned message for messagePinMessage, the game message for messageGameScore, the invoice message for messagePaymentSuccessful, the message with a previously set same background for messageChatSetBackground, the giveaway message for messageGiveawayCompleted, the checklist message for messageChecklistTasksDone, messageChecklistTasksAdded, the message with suggested post information for messageSuggestedPostApprovalFailed, messageSuggestedPostApproved, messageSuggestedPostDeclined, messageSuggestedPostPaid, messageSuggestedPostRefunded, the message with the regular gift that was upgraded for messageUpgradedGift with origin of the type upgradedGiftOriginUpgrade, the message with gift purchase offer for messageUpgradedGiftPurchaseOfferRejected, the message with the request to disable content protection for messageChatHasProtectedContentToggled, the message with the poll for messagePollOptionAdded and messagePollOptionDeleted, and the topic creation message for topic messages without non-bundled replied message. Returns a 404 error if the message doesn't exist
 func (client *Client) GetRepliedMessage(ctx context.Context, req *GetRepliedMessageRequest) (*Message, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -1586,6 +1590,34 @@ func (client *Client) GetMessageProperties(ctx context.Context, req *GetMessageP
 	}
 
 	return UnmarshalMessageProperties(result.Data)
+}
+
+type GetPollOptionPropertiesRequest struct {
+	request
+	// Chat identifier
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the message
+	MessageId int64 `json:"message_id"`
+	// Unique identifier of the answer option, which properties will be returned
+	PollOptionId string `json:"poll_option_id"`
+}
+
+func (req GetPollOptionPropertiesRequest) GetFunctionName() string {
+	return "getPollOptionProperties"
+}
+
+// Returns properties of a poll option. This is an offline method
+func (client *Client) GetPollOptionProperties(ctx context.Context, req *GetPollOptionPropertiesRequest) (*PollOptionProperties, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalPollOptionProperties(result.Data)
 }
 
 type GetMessageThreadRequest struct {
@@ -3102,7 +3134,7 @@ type SearchMessagesRequest struct {
 	Offset string `json:"offset"`
 	// The maximum number of messages to be returned; up to 100. For optimal performance, the number of returned messages is chosen by TDLib and can be smaller than the specified limit
 	Limit int32 `json:"limit"`
-	// Additional filter for messages to search; pass null to search for all messages. Filters searchMessagesFilterMention, searchMessagesFilterUnreadMention, searchMessagesFilterUnreadReaction, searchMessagesFilterFailedToSend, and searchMessagesFilterPinned are unsupported in this function
+	// Additional filter for messages to search; pass null to search for all messages. Filters searchMessagesFilterMention, searchMessagesFilterUnreadMention, searchMessagesFilterUnreadReaction, searchMessagesFilterUnreadPollVote, searchMessagesFilterFailedToSend, and searchMessagesFilterPinned are unsupported in this function
 	Filter SearchMessagesFilter `json:"filter"`
 	// Additional filter for type of the chat of the searched messages; pass null to search for messages in all chats
 	ChatTypeFilter SearchMessagesChatTypeFilter `json:"chat_type_filter"`
@@ -3574,7 +3606,7 @@ type GetChatSparseMessagePositionsRequest struct {
 	request
 	// Identifier of the chat in which to return information about message positions
 	ChatId int64 `json:"chat_id"`
-	// Filter for message content. Filters searchMessagesFilterEmpty, searchMessagesFilterMention, searchMessagesFilterUnreadMention, and searchMessagesFilterUnreadReaction are unsupported in this function
+	// Filter for message content. Filters searchMessagesFilterEmpty, searchMessagesFilterMention, searchMessagesFilterUnreadMention, searchMessagesFilterUnreadReaction, and searchMessagesFilterUnreadPollVote are unsupported in this function
 	Filter SearchMessagesFilter `json:"filter"`
 	// The message identifier from which to return information about message positions
 	FromMessageId int64 `json:"from_message_id"`
@@ -3608,7 +3640,7 @@ type GetChatMessageCalendarRequest struct {
 	ChatId int64 `json:"chat_id"`
 	// Pass topic identifier to get the result only in specific topic; pass null to get the result in all topics; forum topics and message threads aren't supported
 	TopicId MessageTopic `json:"topic_id"`
-	// Filter for message content. Filters searchMessagesFilterEmpty, searchMessagesFilterMention, searchMessagesFilterUnreadMention, and searchMessagesFilterUnreadReaction are unsupported in this function
+	// Filter for message content. Filters searchMessagesFilterEmpty, searchMessagesFilterMention, searchMessagesFilterUnreadMention, searchMessagesFilterUnreadReaction, and searchMessagesFilterUnreadPollVote are unsupported in this function
 	Filter SearchMessagesFilter `json:"filter"`
 	// The message identifier from which to return information about messages; use 0 to get results from the last message
 	FromMessageId int64 `json:"from_message_id"`
@@ -3668,7 +3700,7 @@ type GetChatMessagePositionRequest struct {
 	ChatId int64 `json:"chat_id"`
 	// Pass topic identifier to get position among messages only in specific topic; pass null to get position among all chat messages; message threads aren't supported
 	TopicId MessageTopic `json:"topic_id"`
-	// Filter for message content; searchMessagesFilterEmpty, searchMessagesFilterUnreadMention, searchMessagesFilterUnreadReaction, and searchMessagesFilterFailedToSend are unsupported in this function
+	// Filter for message content; searchMessagesFilterEmpty, searchMessagesFilterUnreadMention, searchMessagesFilterUnreadReaction, searchMessagesFilterUnreadPollVote, and searchMessagesFilterFailedToSend are unsupported in this function
 	Filter SearchMessagesFilter `json:"filter"`
 	// Message identifier
 	MessageId int64 `json:"message_id"`
@@ -4110,6 +4142,10 @@ type GetMessageLinkRequest struct {
 	MessageId int64 `json:"message_id"`
 	// If not 0, timestamp from which the video/audio/video note/voice note/story playing must start, in seconds. The media can be in the message content or in its link preview
 	MediaTimestamp int32 `json:"media_timestamp"`
+	// If not 0, identifier of the checklist task in the message to be linked
+	ChecklistTaskId int32 `json:"checklist_task_id"`
+	// If not empty, identifier of the poll option in the message to be linked
+	PollOptionId string `json:"poll_option_id"`
 	// Pass true to create a link for the whole media album
 	ForAlbum bool `json:"for_album"`
 	// Pass true to create a link to the message as a channel post comment, in a message thread, or a forum topic
@@ -4186,19 +4222,205 @@ func (client *Client) GetMessageLinkInfo(ctx context.Context, req *GetMessageLin
 	return UnmarshalMessageLinkInfo(result.Data)
 }
 
+type CreateTextCompositionStyleRequest struct {
+	request
+	// Title of the style; 1-getOption("text_composition_style_title_length_max") characters
+	Title string `json:"title"`
+	// Identifier of the custom emoji corresponding to the style
+	CustomEmojiId JsonInt64 `json:"custom_emoji_id"`
+	// Prompt that will be used for text composition; 1-getOption("text_composition_style_prompt_length_max") characters
+	Prompt string `json:"prompt"`
+	// Pass true if the current user must be shown as the creator of the style
+	ShowCreator bool `json:"show_creator"`
+}
+
+func (req CreateTextCompositionStyleRequest) GetFunctionName() string {
+	return "createTextCompositionStyle"
+}
+
+// Creates a custom text composition style. May return an error with a message "TONES_SAVED_TOO_MANY" if the maximum number of added custom styles has been reached
+func (client *Client) CreateTextCompositionStyle(ctx context.Context, req *CreateTextCompositionStyleRequest) (*TextCompositionStyle, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalTextCompositionStyle(result.Data)
+}
+
+type EditTextCompositionStyleRequest struct {
+	request
+	// Name of the style
+	Name string `json:"name"`
+	// Title of the style; 1-getOption("text_composition_style_title_length_max") characters
+	Title string `json:"title"`
+	// Identifier of the custom emoji corresponding to the style
+	CustomEmojiId JsonInt64 `json:"custom_emoji_id"`
+	// Prompt that will be used for text composition; 1-getOption("text_composition_style_prompt_length_max") characters
+	Prompt string `json:"prompt"`
+	// Pass true if the current user must be shown as the creator of the style
+	ShowCreator bool `json:"show_creator"`
+}
+
+func (req EditTextCompositionStyleRequest) GetFunctionName() string {
+	return "editTextCompositionStyle"
+}
+
+// Edits a custom text composition style that was created by the current user
+func (client *Client) EditTextCompositionStyle(ctx context.Context, req *EditTextCompositionStyleRequest) (*TextCompositionStyle, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalTextCompositionStyle(result.Data)
+}
+
+type DeleteTextCompositionStyleRequest struct {
+	request
+	// Name of the style
+	Name string `json:"name"`
+}
+
+func (req DeleteTextCompositionStyleRequest) GetFunctionName() string {
+	return "deleteTextCompositionStyle"
+}
+
+// Deletes a custom text composition style that was created by the current user
+func (client *Client) DeleteTextCompositionStyle(ctx context.Context, req *DeleteTextCompositionStyleRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type SearchTextCompositionStyleRequest struct {
+	request
+	// Name of the style
+	Name string `json:"name"`
+}
+
+func (req SearchTextCompositionStyleRequest) GetFunctionName() string {
+	return "searchTextCompositionStyle"
+}
+
+// Searches a custom text composition style by its name
+func (client *Client) SearchTextCompositionStyle(ctx context.Context, req *SearchTextCompositionStyleRequest) (*TextCompositionStyle, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalTextCompositionStyle(result.Data)
+}
+
+type GetTextCompositionStyleExampleRequest struct {
+	request
+	// Name of the style
+	Name string `json:"name"`
+	// 0-based unique number of the requested example; must be non-negative and less than getOption("text_composition_style_example_count")
+	ExampleNumber int32 `json:"example_number"`
+}
+
+func (req GetTextCompositionStyleExampleRequest) GetFunctionName() string {
+	return "getTextCompositionStyleExample"
+}
+
+// Returns an example of usage of a custom text composition style
+func (client *Client) GetTextCompositionStyleExample(ctx context.Context, req *GetTextCompositionStyleExampleRequest) (*TextCompositionStyleExample, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalTextCompositionStyleExample(result.Data)
+}
+
+type AddTextCompositionStyleRequest struct {
+	request
+	// Name of the style
+	Name string `json:"name"`
+}
+
+func (req AddTextCompositionStyleRequest) GetFunctionName() string {
+	return "addTextCompositionStyle"
+}
+
+// Adds a custom text composition style to the list of used by the user styles. May return an error with a message "TONES_SAVED_TOO_MANY" if the maximum number of added custom styles has been reached
+func (client *Client) AddTextCompositionStyle(ctx context.Context, req *AddTextCompositionStyleRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type RemoveTextCompositionStyleRequest struct {
+	request
+	// Name of the style
+	Name string `json:"name"`
+}
+
+func (req RemoveTextCompositionStyleRequest) GetFunctionName() string {
+	return "removeTextCompositionStyle"
+}
+
+// Removes a custom text composition style from the list of used by the user styles. If the style was created by the current user, then it can only be deleted
+func (client *Client) RemoveTextCompositionStyle(ctx context.Context, req *RemoveTextCompositionStyleRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
 type TranslateTextRequest struct {
 	request
 	// Text to translate
 	Text *FormattedText `json:"text"`
-	// Language code of the language to which the message is translated. Must be one of "af", "sq", "am", "ar", "hy", "az", "eu", "be", "bn", "bs", "bg", "ca", "ceb", "zh-CN", "zh", "zh-Hans", "zh-TW", "zh-Hant", "co", "hr", "cs", "da", "nl", "en", "eo", "et", "fi", "fr", "fy", "gl", "ka", "de", "el", "gu", "ht", "ha", "haw", "he", "iw", "hi", "hmn", "hu", "is", "ig", "id", "in", "ga", "it", "ja", "jv", "kn", "kk", "km", "rw", "ko", "ku", "ky", "lo", "la", "lv", "lt", "lb", "mk", "mg", "ms", "ml", "mt", "mi", "mr", "mn", "my", "ne", "no", "ny", "or", "ps", "fa", "pl", "pt", "pa", "ro", "ru", "sm", "gd", "sr", "st", "sn", "sd", "si", "sk", "sl", "so", "es", "su", "sw", "sv", "tl", "tg", "ta", "tt", "te", "th", "tr", "tk", "uk", "ur", "ug", "uz", "vi", "cy", "xh", "yi", "ji", "yo", "zu"
+	// Language code of the language to which the message is translated. Must be one of "af", "sq", "am", "ar", "hy", "az", "eu", "be", "bn", "bs", "bg", "ca", "ceb", "zh-CN", "zh", "zh-Hans", "zh-TW", "zh-Hant", "co", "hr", "cs", "da", "nl", "en", "eo", "et", "fi", "fr", "fy", "gl", "ka", "de", "el", "gu", "ht", "ha", "haw", "he", "iw", "hi", "hmn", "hu", "is", "ig", "id", "in", "ga", "it", "ja", "jv", "kn", "kk", "km", "rw", "ko", "ku", "ky", "lo", "la", "lv", "lt", "lb", "mk", "mg", "ms", "ml", "mt", "mi", "mr", "mn", "my", "ne", "no", "ny", "or", "ps", "fa", "pl", "pt", "pt-BR", "pa", "ro", "ru", "sm", "gd", "sr", "st", "sn", "sd", "si", "sk", "sl", "so", "es", "su", "sw", "sv", "tl", "tg", "ta", "tt", "te", "th", "tr", "tk", "uk", "ur", "ug", "uz", "vi", "cy", "xh", "yi", "ji", "yo", "zu"
 	ToLanguageCode string `json:"to_language_code"`
+	// Tone of the translation; must be one of "", "formal", "neutral", "casual"; defaults to "neutral"
+	Tone string `json:"tone"`
 }
 
 func (req TranslateTextRequest) GetFunctionName() string {
 	return "translateText"
 }
 
-// Translates a text to the given language. If the current user is a Telegram Premium user, then text formatting is preserved
+// Translates a text to the given language; must not be used in secret chats. If the current user is a Telegram Premium user, then text formatting is preserved
 func (client *Client) TranslateText(ctx context.Context, req *TranslateTextRequest) (*FormattedText, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -4220,13 +4442,15 @@ type TranslateMessageTextRequest struct {
 	MessageId int64 `json:"message_id"`
 	// Language code of the language to which the message is translated. See translateText.to_language_code for the list of supported values
 	ToLanguageCode string `json:"to_language_code"`
+	// Tone of the translation; see translateText.tone for the list of supported values
+	Tone string `json:"tone"`
 }
 
 func (req TranslateMessageTextRequest) GetFunctionName() string {
 	return "translateMessageText"
 }
 
-// Extracts text or caption of the given message and translates it to the given language. If the current user is a Telegram Premium user, then text formatting is preserved
+// Extracts text or caption of the given message and translates it to the given language; must not be used in secret chats. If the current user is a Telegram Premium user, then text formatting is preserved
 func (client *Client) TranslateMessageText(ctx context.Context, req *TranslateMessageTextRequest) (*FormattedText, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -4246,8 +4470,10 @@ type SummarizeMessageRequest struct {
 	ChatId int64 `json:"chat_id"`
 	// Identifier of the message
 	MessageId int64 `json:"message_id"`
-	// Pass a language code to which the summary will be translated; may be empty if translation isn't needed. See translateText.to_language_code for the list of supported values
+	// Pass a language code to which the summary will be translated; pass an empty string if translation isn't needed. See translateText.to_language_code for the list of supported values
 	TranslateToLanguageCode string `json:"translate_to_language_code"`
+	// Tone of the summarization; see translateText.tone for the list of supported values
+	Tone string `json:"tone"`
 }
 
 func (req SummarizeMessageRequest) GetFunctionName() string {
@@ -4266,6 +4492,60 @@ func (client *Client) SummarizeMessage(ctx context.Context, req *SummarizeMessag
 	}
 
 	return UnmarshalFormattedText(result.Data)
+}
+
+type ComposeTextWithAiRequest struct {
+	request
+	// The original text
+	Text *FormattedText `json:"text"`
+	// Pass a language code to which the text will be translated; pass an empty string if translation isn't needed. See translateText.to_language_code for the list of supported values
+	TranslateToLanguageCode string `json:"translate_to_language_code"`
+	// Name of the style of the resulted text; handle updateTextCompositionStyles to get the list of supported styles; pass an empty string to keep the current style of the text
+	StyleName string `json:"style_name"`
+	// Pass true to add emoji to the text
+	AddEmojis bool `json:"add_emojis"`
+}
+
+func (req ComposeTextWithAiRequest) GetFunctionName() string {
+	return "composeTextWithAi"
+}
+
+// Changes text using an AI model; must not be used in secret chats. May return an error with a message "AICOMPOSE_FLOOD_PREMIUM" if Telegram Premium is required to send further requests
+func (client *Client) ComposeTextWithAi(ctx context.Context, req *ComposeTextWithAiRequest) (*FormattedText, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalFormattedText(result.Data)
+}
+
+type FixTextWithAiRequest struct {
+	request
+	// The original text
+	Text *FormattedText `json:"text"`
+}
+
+func (req FixTextWithAiRequest) GetFunctionName() string {
+	return "fixTextWithAi"
+}
+
+// Fixes text using an AI model; must not be used in secret chats. May return an error with a message "AICOMPOSE_FLOOD_PREMIUM" if Telegram Premium is required to send further requests
+func (client *Client) FixTextWithAi(ctx context.Context, req *FixTextWithAiRequest) (*FixedText, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalFixedText(result.Data)
 }
 
 type RecognizeSpeechRequest struct {
@@ -6466,6 +6746,32 @@ func (client *Client) ReadAllForumTopicReactions(ctx context.Context, req *ReadA
 	return UnmarshalOk(result.Data)
 }
 
+type ReadAllForumTopicPollVotesRequest struct {
+	request
+	// Chat identifier
+	ChatId int64 `json:"chat_id"`
+	// Forum topic identifier in which poll votes are marked as read
+	ForumTopicId int32 `json:"forum_topic_id"`
+}
+
+func (req ReadAllForumTopicPollVotesRequest) GetFunctionName() string {
+	return "readAllForumTopicPollVotes"
+}
+
+// Marks all poll votes in a topic in a forum supergroup chat as read
+func (client *Client) ReadAllForumTopicPollVotes(ctx context.Context, req *ReadAllForumTopicPollVotesRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
 type UnpinAllForumTopicMessagesRequest struct {
 	request
 	// Identifier of the chat
@@ -6734,6 +7040,60 @@ func (req RemoveMessageReactionRequest) GetFunctionName() string {
 
 // Removes a reaction from a message. A chosen reaction can always be removed
 func (client *Client) RemoveMessageReaction(ctx context.Context, req *RemoveMessageReactionRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type DeleteAllRecentMessageReactionsFromSenderRequest struct {
+	request
+	// Chat identifier
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the sender of reactions to delete
+	SenderId MessageSender `json:"sender_id"`
+}
+
+func (req DeleteAllRecentMessageReactionsFromSenderRequest) GetFunctionName() string {
+	return "deleteAllRecentMessageReactionsFromSender"
+}
+
+// Deletes all recent reactions added by the specified sender in a chat. Supported only for basic groups and supergroups; requires can_delete_messages administrator right
+func (client *Client) DeleteAllRecentMessageReactionsFromSender(ctx context.Context, req *DeleteAllRecentMessageReactionsFromSenderRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type DeleteMessageReactionsFromSenderRequest struct {
+	request
+	// Chat identifier
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the message containing the reactions. Use messageProperties.can_delete_reactions to check whether the method can be used for a message
+	MessageId int64 `json:"message_id"`
+	// Identifier of the sender of reactions to delete
+	SenderId MessageSender `json:"sender_id"`
+}
+
+func (req DeleteMessageReactionsFromSenderRequest) GetFunctionName() string {
+	return "deleteMessageReactionsFromSender"
+}
+
+// Deletes all reactions added by the specified sender on a message
+func (client *Client) DeleteMessageReactionsFromSender(ctx context.Context, req *DeleteMessageReactionsFromSenderRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -7116,7 +7476,7 @@ func (req ParseTextEntitiesRequest) GetFunctionName() string {
 	return "parseTextEntities"
 }
 
-// Parses Bold, Italic, Underline, Strikethrough, Spoiler, CustomEmoji, BlockQuote, ExpandableBlockQuote, Code, Pre, PreCode, TextUrl and MentionName entities from a marked-up text. Can be called synchronously
+// Parses Bold, Italic, Underline, Strikethrough, Spoiler, CustomEmoji, BlockQuote, ExpandableBlockQuote, Code, Pre, PreCode, TextUrl, MentionName, and DateTime entities from a marked-up text. Can be called synchronously
 func ParseTextEntities(req *ParseTextEntitiesRequest) (*FormattedText, error) {
 	result, err := Execute(req)
 	if err != nil {
@@ -7131,7 +7491,7 @@ func ParseTextEntities(req *ParseTextEntitiesRequest) (*FormattedText, error) {
 }
 
 // deprecated
-// Parses Bold, Italic, Underline, Strikethrough, Spoiler, CustomEmoji, BlockQuote, ExpandableBlockQuote, Code, Pre, PreCode, TextUrl and MentionName entities from a marked-up text. Can be called synchronously
+// Parses Bold, Italic, Underline, Strikethrough, Spoiler, CustomEmoji, BlockQuote, ExpandableBlockQuote, Code, Pre, PreCode, TextUrl, MentionName, and DateTime entities from a marked-up text. Can be called synchronously
 func (client *Client) ParseTextEntities(req *ParseTextEntitiesRequest) (*FormattedText, error) {
 	return ParseTextEntities(req)
 }
@@ -7475,6 +7835,62 @@ func (client *Client) GetThemeParametersJsonString(req *GetThemeParametersJsonSt
 	return GetThemeParametersJsonString(req)
 }
 
+type AddPollOptionRequest struct {
+	request
+	// Identifier of the chat to which the poll belongs
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the message containing the poll. Use messagePoll.can_add_option to check whether an option can be added
+	MessageId int64 `json:"message_id"`
+	// The new option
+	Option *InputPollOption `json:"option"`
+}
+
+func (req AddPollOptionRequest) GetFunctionName() string {
+	return "addPollOption"
+}
+
+// Adds an option to a poll
+func (client *Client) AddPollOption(ctx context.Context, req *AddPollOptionRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type DeletePollOptionRequest struct {
+	request
+	// Identifier of the chat to which the poll belongs
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the message containing the poll
+	MessageId int64 `json:"message_id"`
+	// Unique identifier of the option. Use pollOptionProperties.can_be_deleted to check whether the option can be deleted by the user
+	OptionId string `json:"option_id"`
+}
+
+func (req DeletePollOptionRequest) GetFunctionName() string {
+	return "deletePollOption"
+}
+
+// Deletes an option from a poll
+func (client *Client) DeletePollOption(ctx context.Context, req *DeletePollOptionRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
 type SetPollAnswerRequest struct {
 	request
 	// Identifier of the chat to which the poll belongs
@@ -7489,7 +7905,7 @@ func (req SetPollAnswerRequest) GetFunctionName() string {
 	return "setPollAnswer"
 }
 
-// Changes the user answer to a poll. A poll in quiz mode can be answered only once
+// Changes the user answer to a poll
 func (client *Client) SetPollAnswer(ctx context.Context, req *SetPollAnswerRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -7521,7 +7937,7 @@ func (req GetPollVotersRequest) GetFunctionName() string {
 	return "getPollVoters"
 }
 
-// Returns message senders voted for the specified option in a non-anonymous polls. For optimal performance, the number of returned users is chosen by TDLib
+// Returns message senders voted for the specified option in a poll; use poll.can_get_voters to check whether the method can be used. For optimal performance, the number of returned users is chosen by TDLib
 func (client *Client) GetPollVoters(ctx context.Context, req *GetPollVotersRequest) (*PollVoters, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -7533,6 +7949,34 @@ func (client *Client) GetPollVoters(ctx context.Context, req *GetPollVotersReque
 	}
 
 	return UnmarshalPollVoters(result.Data)
+}
+
+type GetPollVoteStatisticsRequest struct {
+	request
+	// Identifier of the chat to which the poll belongs
+	ChatId int64 `json:"chat_id"`
+	// Identifier of the message containing the poll. Use messageProperties.can_get_poll_vote_statistics to check whether the method can be used for a message
+	MessageId int64 `json:"message_id"`
+	// Pass true if a dark theme is used by the application
+	IsDark bool `json:"is_dark"`
+}
+
+func (req GetPollVoteStatisticsRequest) GetFunctionName() string {
+	return "getPollVoteStatistics"
+}
+
+// Returns statistics of poll votes in a poll
+func (client *Client) GetPollVoteStatistics(ctx context.Context, req *GetPollVoteStatisticsRequest) (*PollVoteStatistics, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalPollVoteStatistics(result.Data)
 }
 
 type StopPollRequest struct {
@@ -7761,10 +8205,8 @@ func (client *Client) GetLoginUrl(ctx context.Context, req *GetLoginUrlRequest) 
 
 type ShareUsersWithBotRequest struct {
 	request
-	// Identifier of the chat with the bot
-	ChatId int64 `json:"chat_id"`
-	// Identifier of the message with the button
-	MessageId int64 `json:"message_id"`
+	// Source of the button
+	Source KeyboardButtonSource `json:"source"`
 	// Identifier of the button
 	ButtonId int32 `json:"button_id"`
 	// Identifiers of the shared users
@@ -7793,10 +8235,8 @@ func (client *Client) ShareUsersWithBot(ctx context.Context, req *ShareUsersWith
 
 type ShareChatWithBotRequest struct {
 	request
-	// Identifier of the chat with the bot
-	ChatId int64 `json:"chat_id"`
-	// Identifier of the message with the button
-	MessageId int64 `json:"message_id"`
+	// Source of the button
+	Source KeyboardButtonSource `json:"source"`
 	// Identifier of the button
 	ButtonId int32 `json:"button_id"`
 	// Identifier of the shared chat
@@ -7889,6 +8329,32 @@ func (client *Client) AnswerInlineQuery(ctx context.Context, req *AnswerInlineQu
 	return UnmarshalOk(result.Data)
 }
 
+type AnswerGuestQueryRequest struct {
+	request
+	// Identifier of the guest query
+	GuestQueryId JsonInt64 `json:"guest_query_id"`
+	// The result of the query
+	Result InputInlineQueryResult `json:"result"`
+}
+
+func (req AnswerGuestQueryRequest) GetFunctionName() string {
+	return "answerGuestQuery"
+}
+
+// Sets the result of a guest query; for bots only
+func (client *Client) AnswerGuestQuery(ctx context.Context, req *AnswerGuestQueryRequest) (*InlineMessageId, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalInlineMessageId(result.Data)
+}
+
 type SavePreparedInlineMessageRequest struct {
 	request
 	// Identifier of the user
@@ -7941,6 +8407,58 @@ func (client *Client) GetPreparedInlineMessage(ctx context.Context, req *GetPrep
 	}
 
 	return UnmarshalPreparedInlineMessage(result.Data)
+}
+
+type SavePreparedKeyboardButtonRequest struct {
+	request
+	// Identifier of the user
+	UserId int64 `json:"user_id"`
+	// The button; must be of the type keyboardButtonTypeRequestUsers, keyboardButtonTypeRequestChat, or keyboardButtonTypeRequestManagedBot
+	Button *KeyboardButton `json:"button"`
+}
+
+func (req SavePreparedKeyboardButtonRequest) GetFunctionName() string {
+	return "savePreparedKeyboardButton"
+}
+
+// Saves a keyboard button to be shown to the given user; for bots only
+func (client *Client) SavePreparedKeyboardButton(ctx context.Context, req *SavePreparedKeyboardButtonRequest) (*Text, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalText(result.Data)
+}
+
+type GetPreparedKeyboardButtonRequest struct {
+	request
+	// Identifier of the bot that created the button
+	BotUserId int64 `json:"bot_user_id"`
+	// Identifier of the prepared button
+	PreparedButtonId string `json:"prepared_button_id"`
+}
+
+func (req GetPreparedKeyboardButtonRequest) GetFunctionName() string {
+	return "getPreparedKeyboardButton"
+}
+
+// Returns a keyboard button prepared by the bot for the user. The button will be of the type keyboardButtonTypeRequestUsers, keyboardButtonTypeRequestChat, or keyboardButtonTypeRequestManagedBot
+func (client *Client) GetPreparedKeyboardButton(ctx context.Context, req *GetPreparedKeyboardButtonRequest) (*KeyboardButton, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalKeyboardButton(result.Data)
 }
 
 type GetGrossingWebAppBotsRequest struct {
@@ -8210,7 +8728,7 @@ func (req AnswerWebAppQueryRequest) GetFunctionName() string {
 }
 
 // Sets the result of interaction with a Web App and sends corresponding message on behalf of the user to the chat from which the query originated; for bots only
-func (client *Client) AnswerWebAppQuery(ctx context.Context, req *AnswerWebAppQueryRequest) (*SentWebAppMessage, error) {
+func (client *Client) AnswerWebAppQuery(ctx context.Context, req *AnswerWebAppQueryRequest) (*InlineMessageId, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -8220,7 +8738,7 @@ func (client *Client) AnswerWebAppQuery(ctx context.Context, req *AnswerWebAppQu
 		return nil, buildResponseError(result.Data)
 	}
 
-	return UnmarshalSentWebAppMessage(result.Data)
+	return UnmarshalInlineMessageId(result.Data)
 }
 
 type CheckWebAppFileDownloadRequest struct {
@@ -8549,7 +9067,7 @@ type SendTextMessageDraftRequest struct {
 	ForumTopicId int32 `json:"forum_topic_id"`
 	// Unique identifier of the draft
 	DraftId JsonInt64 `json:"draft_id"`
-	// Draft text of the message
+	// Draft text of the message; pass null to show a "Thinking..." placeholder
 	Text *FormattedText `json:"text"`
 }
 
@@ -8699,6 +9217,66 @@ func (client *Client) ClickAnimatedEmojiMessage(ctx context.Context, req *ClickA
 	}
 
 	return UnmarshalSticker(result.Data)
+}
+
+type ListenToAudioRequest struct {
+	request
+	// Identifier of the file with an audio
+	AudioFileId int32 `json:"audio_file_id"`
+	// Duration of the listening to the audio, in seconds
+	Duration int32 `json:"duration"`
+}
+
+func (req ListenToAudioRequest) GetFunctionName() string {
+	return "listenToAudio"
+}
+
+// Informs TDLib that an audio was listened by the user
+func (client *Client) ListenToAudio(ctx context.Context, req *ListenToAudioRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type SendMessageViewMetricsRequest struct {
+	request
+	// Chat identifier
+	ChatId int64 `json:"chat_id"`
+	// The identifier of the message being viewed
+	MessageId int64 `json:"message_id"`
+	// The amount of time the message was seen by at least 1 pixel; in milliseconds
+	TimeInViewMs int32 `json:"time_in_view_ms"`
+	// The amount of time the message was seen by at least 1 pixel within 15 seconds after any action from the user; in milliseconds
+	ActiveTimeInViewMs int32 `json:"active_time_in_view_ms"`
+	// The ratio of the post height to the viewport height in 1/1000 fractions
+	HeightToViewportRatioPerMille int32 `json:"height_to_viewport_ratio_per_mille"`
+	// The ratio of the viewed post height to the full post height in 1/1000 fractions; 0-1000
+	SeenRangeRatioPerMille int32 `json:"seen_range_ratio_per_mille"`
+}
+
+func (req SendMessageViewMetricsRequest) GetFunctionName() string {
+	return "sendMessageViewMetrics"
+}
+
+// Informs TDLib about details of a message view by the user from a chat, a message thread or a forum topic history. The method must be called if the message wasn't seen for more than 300 milliseconds, the viewport was destroyed, or the total view duration exceeded 5 minutes
+func (client *Client) SendMessageViewMetrics(ctx context.Context, req *SendMessageViewMetricsRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
 }
 
 type GetInternalLinkRequest struct {
@@ -8869,6 +9447,9 @@ func (client *Client) GetInternalLinkType(ctx context.Context, req *GetInternalL
 	case ConstructorInternalLinkTypeQrCodeAuthentication:
 		return UnmarshalInternalLinkTypeQrCodeAuthentication(result.Data)
 
+	case ConstructorInternalLinkTypeRequestManagedBot:
+		return UnmarshalInternalLinkTypeRequestManagedBot(result.Data)
+
 	case ConstructorInternalLinkTypeRestorePurchases:
 		return UnmarshalInternalLinkTypeRestorePurchases(result.Data)
 
@@ -8892,6 +9473,9 @@ func (client *Client) GetInternalLinkType(ctx context.Context, req *GetInternalL
 
 	case ConstructorInternalLinkTypeStoryAlbum:
 		return UnmarshalInternalLinkTypeStoryAlbum(result.Data)
+
+	case ConstructorInternalLinkTypeTextCompositionStyle:
+		return UnmarshalInternalLinkTypeTextCompositionStyle(result.Data)
 
 	case ConstructorInternalLinkTypeTheme:
 		return UnmarshalInternalLinkTypeTheme(result.Data)
@@ -9120,6 +9704,30 @@ func (req ReadAllChatReactionsRequest) GetFunctionName() string {
 
 // Marks all reactions in a chat as read
 func (client *Client) ReadAllChatReactions(ctx context.Context, req *ReadAllChatReactionsRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
+type ReadAllChatPollVotesRequest struct {
+	request
+	// Chat identifier
+	ChatId int64 `json:"chat_id"`
+}
+
+func (req ReadAllChatPollVotesRequest) GetFunctionName() string {
+	return "readAllChatPollVotes"
+}
+
+// Marks all poll votes in a chat as read
+func (client *Client) ReadAllChatPollVotes(ctx context.Context, req *ReadAllChatPollVotesRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -10962,7 +11570,7 @@ func (req GetChatOwnerAfterLeavingRequest) GetFunctionName() string {
 	return "getChatOwnerAfterLeaving"
 }
 
-// Returns the user who will become the owner of the chat after 7 days if the current user does not return to the supergroup or channel during that period or immediately for basic groups; requires owner privileges in the chat. Available only for supergroups and channel chats
+// Returns the user who will become the owner of the chat after 7 days if the current user does not return to the supergroup or channel during that period or immediately for basic groups; requires owner privileges in the chat. Available only for basic groups, supergroups, and channel chats
 func (client *Client) GetChatOwnerAfterLeaving(ctx context.Context, req *GetChatOwnerAfterLeavingRequest) (*User, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -11114,7 +11722,7 @@ func (req GetSavedNotificationSoundRequest) GetFunctionName() string {
 }
 
 // Returns saved notification sound by its identifier. Returns a 404 error if there is no saved notification sound with the specified identifier
-func (client *Client) GetSavedNotificationSound(ctx context.Context, req *GetSavedNotificationSoundRequest) (*NotificationSounds, error) {
+func (client *Client) GetSavedNotificationSound(ctx context.Context, req *GetSavedNotificationSoundRequest) (*NotificationSound, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
 		return nil, err
@@ -11124,7 +11732,7 @@ func (client *Client) GetSavedNotificationSound(ctx context.Context, req *GetSav
 		return nil, buildResponseError(result.Data)
 	}
 
-	return UnmarshalNotificationSounds(result.Data)
+	return UnmarshalNotificationSound(result.Data)
 }
 
 type GetSavedNotificationSoundsRequest struct {
@@ -13468,7 +14076,7 @@ func (req ImportMessagesRequest) GetFunctionName() string {
 	return "importMessages"
 }
 
-// Imports messages exported from another app
+// Imports messages exported from another application
 func (client *Client) ImportMessages(ctx context.Context, req *ImportMessagesRequest) (*Ok, error) {
 	result, err := client.Send(ctx, req)
 	if err != nil {
@@ -14828,7 +15436,7 @@ type SendGroupCallMessageRequest struct {
 	request
 	// Group call identifier
 	GroupCallId int32 `json:"group_call_id"`
-	// Text of the message to send; 1-getOption("group_call_message_text_length_max") characters for non-live-stories; see updateGroupCallMessageLevels for live story restrictions, which depends on paid_message_star_count. Can't contain line feeds for live stories
+	// Text of the message to send; 1-getOption("group_call_message_text_length_max") characters for non-live-stories; see updateGroupCallMessageLevels for live story restrictions, which depends on paid_message_star_count. Can't contain line feeds for live stories. Can contain only Bold, Italic, Underline, Strikethrough, Spoiler, CustomEmoji, and DateTime entities for live stories
 	Text *FormattedText `json:"text"`
 	// The number of Telegram Stars the user agreed to pay to send the message; for live stories only; 0-getOption("paid_group_call_message_star_count_max"). Must be 0 for messages sent to live stories posted by the current user
 	PaidMessageStarCount int64 `json:"paid_message_star_count"`
@@ -16002,7 +16610,7 @@ type SetUserNoteRequest struct {
 	request
 	// User identifier
 	UserId int64 `json:"user_id"`
-	// Note to set for the user; 0-getOption("user_note_text_length_max") characters. Only Bold, Italic, Underline, Strikethrough, Spoiler, and CustomEmoji entities are allowed
+	// Note to set for the user; 0-getOption("user_note_text_length_max") characters. Only Bold, Italic, Underline, Strikethrough, Spoiler, CustomEmoji, and DateTime entities are allowed
 	Note *FormattedText `json:"note"`
 }
 
@@ -16126,6 +16734,32 @@ func (client *Client) SetUserEmojiStatus(ctx context.Context, req *SetUserEmojiS
 	}
 
 	return UnmarshalOk(result.Data)
+}
+
+type GetPersonalChatHistoryRequest struct {
+	request
+	// User identifier
+	UserId int64 `json:"user_id"`
+	// The maximum number of messages to be returned; 1-20
+	Limit int32 `json:"limit"`
+}
+
+func (req GetPersonalChatHistoryRequest) GetFunctionName() string {
+	return "getPersonalChatHistory"
+}
+
+// Returns messages in the personal chat of a given user; for bots only
+func (client *Client) GetPersonalChatHistory(ctx context.Context, req *GetPersonalChatHistoryRequest) (*Messages, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalMessages(result.Data)
 }
 
 type SearchUserByPhoneNumberRequest struct {
@@ -16260,8 +16894,14 @@ func (client *Client) IsProfileAudio(ctx context.Context, req *IsProfileAudioReq
 
 type AddProfileAudioRequest struct {
 	request
-	// Identifier of the audio file to be added. The file must have been uploaded to the server
-	FileId int32 `json:"file_id"`
+	// The audio file to be added
+	Audio InputFile `json:"audio"`
+	// Duration of the audio, in seconds; may be replaced by the server; ignored for already uploaded files
+	Duration int32 `json:"duration"`
+	// Title of the audio; 0-64 characters; may be replaced by the server; ignored for already uploaded files
+	Title string `json:"title"`
+	// Performer of the audio; 0-64 characters, may be replaced by the server; ignored for already uploaded files
+	Performer string `json:"performer"`
 }
 
 func (req AddProfileAudioRequest) GetFunctionName() string {
@@ -18791,6 +19431,157 @@ func (client *Client) DeleteBotMediaPreviews(ctx context.Context, req *DeleteBot
 	return UnmarshalOk(result.Data)
 }
 
+type CheckBotUsernameRequest struct {
+	request
+	// Username to be checked
+	Username string `json:"username"`
+}
+
+func (req CheckBotUsernameRequest) GetFunctionName() string {
+	return "checkBotUsername"
+}
+
+// Checks whether a username can be set for a new bot. Use checkChatUsername to check username for other chat types
+func (client *Client) CheckBotUsername(ctx context.Context, req *CheckBotUsernameRequest) (CheckChatUsernameResult, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	switch result.MetaType {
+	case ConstructorCheckChatUsernameResultOk:
+		return UnmarshalCheckChatUsernameResultOk(result.Data)
+
+	case ConstructorCheckChatUsernameResultUsernameInvalid:
+		return UnmarshalCheckChatUsernameResultUsernameInvalid(result.Data)
+
+	case ConstructorCheckChatUsernameResultUsernameOccupied:
+		return UnmarshalCheckChatUsernameResultUsernameOccupied(result.Data)
+
+	case ConstructorCheckChatUsernameResultUsernamePurchasable:
+		return UnmarshalCheckChatUsernameResultUsernamePurchasable(result.Data)
+
+	case ConstructorCheckChatUsernameResultPublicChatsTooMany:
+		return UnmarshalCheckChatUsernameResultPublicChatsTooMany(result.Data)
+
+	case ConstructorCheckChatUsernameResultPublicGroupsUnavailable:
+		return UnmarshalCheckChatUsernameResultPublicGroupsUnavailable(result.Data)
+
+	default:
+		return nil, errors.New("invalid type")
+	}
+}
+
+type CreateBotRequest struct {
+	request
+	// Identifier of the bot that will manage the created bot
+	ManagerBotUserId int64 `json:"manager_bot_user_id"`
+	// Name of the bot; 1-64 characters
+	Name string `json:"name"`
+	// Username of the bot. The username must end with "bot". Use checkBotUsername to find whether the name is suitable
+	Username string `json:"username"`
+	// Pass true if the bot is created from an internalLinkTypeRequestManagedBot link
+	ViaLink bool `json:"via_link"`
+}
+
+func (req CreateBotRequest) GetFunctionName() string {
+	return "createBot"
+}
+
+// Creates a bot which will be managed by another bot. Returns the created bot. May return an error with a message "BOT_CREATE_LIMIT_EXCEEDED" if the user already owns the maximum allowed number of bots as per premiumLimitTypeOwnedBotCount. An internal link "https://t.me/BotFather?start=deletebot" can be processed to handle the error
+func (client *Client) CreateBot(ctx context.Context, req *CreateBotRequest) (*User, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalUser(result.Data)
+}
+
+type GetManagedBotTokenRequest struct {
+	request
+	// Identifier of the managed bot
+	BotUserId int64 `json:"bot_user_id"`
+	// Pass true to revoke the current token and create a new one
+	Revoke bool `json:"revoke"`
+}
+
+func (req GetManagedBotTokenRequest) GetFunctionName() string {
+	return "getManagedBotToken"
+}
+
+// Returns token of a managed bot; for bots only
+func (client *Client) GetManagedBotToken(ctx context.Context, req *GetManagedBotTokenRequest) (*Text, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalText(result.Data)
+}
+
+type GetManagedBotAccessSettingsRequest struct {
+	request
+	// Identifier of the managed bot
+	BotUserId int64 `json:"bot_user_id"`
+}
+
+func (req GetManagedBotAccessSettingsRequest) GetFunctionName() string {
+	return "getManagedBotAccessSettings"
+}
+
+// Returns access settings of a managed bot; for bots only
+func (client *Client) GetManagedBotAccessSettings(ctx context.Context, req *GetManagedBotAccessSettingsRequest) (*BotAccessSettings, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalBotAccessSettings(result.Data)
+}
+
+type SetManagedBotAccessSettingsRequest struct {
+	request
+	// Identifier of the managed bot
+	BotUserId int64 `json:"bot_user_id"`
+	// New access settings
+	Settings *BotAccessSettings `json:"settings"`
+}
+
+func (req SetManagedBotAccessSettingsRequest) GetFunctionName() string {
+	return "setManagedBotAccessSettings"
+}
+
+// Sets access settings of a managed bot; for bots only
+func (client *Client) SetManagedBotAccessSettings(ctx context.Context, req *SetManagedBotAccessSettingsRequest) (*Ok, error) {
+	result, err := client.Send(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MetaType == "error" {
+		return nil, buildResponseError(result.Data)
+	}
+
+	return UnmarshalOk(result.Data)
+}
+
 type SetBotNameRequest struct {
 	request
 	// Identifier of the target bot
@@ -20229,7 +21020,7 @@ type SendGiftRequest struct {
 	GiftId JsonInt64 `json:"gift_id"`
 	// Identifier of the user or the channel chat that will receive the gift; limited gifts can't be sent to channel chats
 	OwnerId MessageSender `json:"owner_id"`
-	// Text to show along with the gift; 0-getOption("gift_text_length_max") characters. Only Bold, Italic, Underline, Strikethrough, Spoiler, and CustomEmoji entities are allowed. Must be empty if the receiver enabled paid messages
+	// Text to show along with the gift; 0-getOption("gift_text_length_max") characters. Only Bold, Italic, Underline, Strikethrough, Spoiler, CustomEmoji, and DateTime entities are allowed. Must be empty if the receiver enabled paid messages
 	Text *FormattedText `json:"text"`
 	// Pass true to show gift text and sender only to the gift receiver; otherwise, everyone will be able to see them
 	IsPrivate bool `json:"is_private"`
@@ -20359,7 +21150,7 @@ type PlaceGiftAuctionBidRequest struct {
 	StarCount int64 `json:"star_count"`
 	// Identifier of the user who will receive the gift
 	UserId int64 `json:"user_id"`
-	// Text to show along with the gift; 0-getOption("gift_text_length_max") characters. Only Bold, Italic, Underline, Strikethrough, Spoiler, and CustomEmoji entities are allowed. Must be empty if the receiver enabled paid messages
+	// Text to show along with the gift; 0-getOption("gift_text_length_max") characters. Only Bold, Italic, Underline, Strikethrough, Spoiler, CustomEmoji, and DateTime entities are allowed. Must be empty if the receiver enabled paid messages
 	Text *FormattedText `json:"text"`
 	// Pass true to show gift text and sender only to the gift receiver; otherwise, everyone will be able to see them
 	IsPrivate bool `json:"is_private"`
@@ -20997,7 +21788,7 @@ func (req GetUpgradedGiftsPromotionalAnimationRequest) GetFunctionName() string 
 	return "getUpgradedGiftsPromotionalAnimation"
 }
 
-// Returns promotional anumation for upgraded gifts
+// Returns promotional animation for upgraded gifts
 func (client *Client) GetUpgradedGiftsPromotionalAnimation(ctx context.Context) (*Animation, error) {
 	req := &GetUpgradedGiftsPromotionalAnimationRequest{}
 	result, err := client.Send(ctx, req)
@@ -21046,6 +21837,8 @@ type SearchGiftsForResaleRequest struct {
 	Order GiftForResaleOrder `json:"order"`
 	// Pass true to get only gifts suitable for crafting
 	ForCrafting bool `json:"for_crafting"`
+	// Pass true to get only gifts that can be bought using Telegram Stars
+	ForStars bool `json:"for_stars"`
 	// Attributes used to filter received gifts. If multiple attributes of the same type are specified, then all of them are allowed. If none attributes of specific type are specified, then all values for this attribute type are allowed
 	Attributes []UpgradedGiftAttributeId `json:"attributes"`
 	// Offset of the first entry to return as received from the previous request with the same order and attributes; use empty string to get the first chunk of results
@@ -24343,7 +25136,7 @@ type GiftPremiumWithStarsRequest struct {
 	StarCount int64 `json:"star_count"`
 	// Number of months the Telegram Premium subscription will be active for the user
 	MonthCount int32 `json:"month_count"`
-	// Text to show to the user receiving Telegram Premium; 0-getOption("gift_text_length_max") characters. Only Bold, Italic, Underline, Strikethrough, Spoiler, and CustomEmoji entities are allowed
+	// Text to show to the user receiving Telegram Premium; 0-getOption("gift_text_length_max") characters. Only Bold, Italic, Underline, Strikethrough, Spoiler, CustomEmoji, and DateTime entities are allowed
 	Text *FormattedText `json:"text"`
 }
 
@@ -25285,6 +26078,8 @@ type AddProxyRequest struct {
 	Proxy *Proxy `json:"proxy"`
 	// Pass true to immediately enable the proxy
 	Enable bool `json:"enable"`
+	// Comment to set for the proxy
+	Comment string `json:"comment"`
 }
 
 func (req AddProxyRequest) GetFunctionName() string {
@@ -25313,6 +26108,8 @@ type EditProxyRequest struct {
 	Proxy *Proxy `json:"proxy"`
 	// Pass true to immediately enable the proxy
 	Enable bool `json:"enable"`
+	// New comment for the proxy
+	Comment string `json:"comment"`
 }
 
 func (req EditProxyRequest) GetFunctionName() string {
@@ -26099,6 +26896,9 @@ func (client *Client) TestUseUpdate(ctx context.Context) (Update, error) {
 	case ConstructorUpdateMessageUnreadReactions:
 		return UnmarshalUpdateMessageUnreadReactions(result.Data)
 
+	case ConstructorUpdateMessageContainsUnreadPollVotes:
+		return UnmarshalUpdateMessageContainsUnreadPollVotes(result.Data)
+
 	case ConstructorUpdateMessageFactCheck:
 		return UnmarshalUpdateMessageFactCheck(result.Data)
 
@@ -26185,6 +26985,9 @@ func (client *Client) TestUseUpdate(ctx context.Context) (Update, error) {
 
 	case ConstructorUpdateChatUnreadReactionCount:
 		return UnmarshalUpdateChatUnreadReactionCount(result.Data)
+
+	case ConstructorUpdateChatUnreadPollVoteCount:
+		return UnmarshalUpdateChatUnreadPollVoteCount(result.Data)
 
 	case ConstructorUpdateChatVideoChat:
 		return UnmarshalUpdateChatVideoChat(result.Data)
@@ -26513,6 +27316,9 @@ func (client *Client) TestUseUpdate(ctx context.Context) (Update, error) {
 	case ConstructorUpdateAnimationSearchParameters:
 		return UnmarshalUpdateAnimationSearchParameters(result.Data)
 
+	case ConstructorUpdateTextCompositionStyles:
+		return UnmarshalUpdateTextCompositionStyles(result.Data)
+
 	case ConstructorUpdateSuggestedActions:
 		return UnmarshalUpdateSuggestedActions(result.Data)
 
@@ -26543,6 +27349,9 @@ func (client *Client) TestUseUpdate(ctx context.Context) (Update, error) {
 	case ConstructorUpdateNewChosenInlineResult:
 		return UnmarshalUpdateNewChosenInlineResult(result.Data)
 
+	case ConstructorUpdateNewGuestQuery:
+		return UnmarshalUpdateNewGuestQuery(result.Data)
+
 	case ConstructorUpdateNewCallbackQuery:
 		return UnmarshalUpdateNewCallbackQuery(result.Data)
 
@@ -26569,6 +27378,9 @@ func (client *Client) TestUseUpdate(ctx context.Context) (Update, error) {
 
 	case ConstructorUpdatePollAnswer:
 		return UnmarshalUpdatePollAnswer(result.Data)
+
+	case ConstructorUpdateManagedBot:
+		return UnmarshalUpdateManagedBot(result.Data)
 
 	case ConstructorUpdateChatMember:
 		return UnmarshalUpdateChatMember(result.Data)

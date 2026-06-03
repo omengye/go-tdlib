@@ -2,3 +2,5 @@
 /.tdlib
 /.cmd
 docker/td
+*.exe
+*.dll

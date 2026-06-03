@@ -1,5 +1,5 @@
-TAG := af0cb1d30a1e5cb1a10cd83b48998ca9ea9ce249
-COMMIT := af0cb1d
+TAG := e0943d068ce90b5010f1aea946e6901e25b43bf6
+COMMIT := e0943d0
 
 schema-update:
 	curl https://raw.githubusercontent.com/tdlib/td/${TAG}/td/generate/scheme/td_api.tl 2>/dev/null > ./data/td_api.tl
